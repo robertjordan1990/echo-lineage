@@ -1,0 +1,27 @@
+name: echo-lineage CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Verify hash chain in PAIR example
+        run: |
+          python3 -B tools/tools/echo_msg_hash.py verify --in Ht_pair.jsonl --recompute
+
+      - name: Verify complete release and regression suite
+        run: |
+          python3 -B scripts/verify_release.py

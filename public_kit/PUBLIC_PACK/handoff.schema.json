@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/echo-lineage/v1/handoff.schema.json",
+  "title": "HANDOFF.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "document_type",
+    "body",
+    "responsibility",
+    "document_hash",
+    "resulting_head",
+    "proofs"
+  ],
+  "properties": {
+    "protocol": {"const": "echo-lineage/v1"},
+    "document_type": {"const": "handoff"},
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handoff_id",
+        "trajectory_id",
+        "genesis_root_document_hash",
+        "issuer_installation_id",
+        "issuer_runtime_session_id",
+        "recipient_binding",
+        "recording_operator_id",
+        "sequence",
+        "handoff_nonce",
+        "issued_at",
+        "lineage_root_ref",
+        "latest_acceptance_ref",
+        "previous_handoff_hash",
+        "lineage_parents",
+        "inheritance_sources",
+        "memory_heads",
+        "ht_heads",
+        "fork_intent",
+        "constraints"
+      ],
+      "properties": {
+        "handoff_id": {
+          "$ref": "common-definitions.schema.json#/$defs/handoff_id"
+        },
+        "trajectory_id": {
+          "$ref": "common-definitions.schema.json#/$defs/trajectory_id"
+        },
+        "genesis_root_document_hash": {
+          "$ref": "common-definitions.schema.json#/$defs/sha256"
+        },
+        "issuer_installation_id": {
+          "$ref": "common-definitions.schema.json#/$defs/installation_id"
+        },
+        "issuer_runtime_session_id": {
+          "$ref": "common-definitions.schema.json#/$defs/runtime_session_id"
+        },
+        "recipient_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "recipient_installation_id"],
+          "properties": {
+            "mode": {"enum": ["bound", "unbound"]},
+            "recipient_installation_id": {
+              "oneOf": [
+                {
+                  "$ref": "common-definitions.schema.json#/$defs/installation_id"
+                },
+                {"type": "null"}
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {"mode": {"const": "bound"}},
+                "required": ["mode"]
+              },
+              "then": {
+                "properties": {
+                  "recipient_installation_id": {
+                    "$ref": "common-definitions.schema.json#/$defs/installation_id"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "recipient_installation_id": {"type": "null"}
+                }
+              }
+            }
+          ]
+        },
+        "recording_operator_id": {
+          "$ref": "common-definitions.schema.json#/$defs/decision_actor_id"
+        },
+        "sequence": {"type": "integer", "minimum": 0},
+        "handoff_nonce": {
+          "$ref": "common-definitions.schema.json#/$defs/nonce"
+        },
+        "issued_at": {
+          "$ref": "common-definitions.schema.json#/$defs/timestamp"
+        },
+        "expires_at": {
+          "$ref": "common-definitions.schema.json#/$defs/timestamp"
+        },
+        "lineage_root_ref": {
+          "allOf": [
+            {
+              "$ref": "common-definitions.schema.json#/$defs/artifact_ref"
+            },
+            {
+              "properties": {
+                "hash_scope": {"const": "canonical_document"}
+              }
+            }
+          ]
+        },
+        "latest_acceptance_ref": {
+          "allOf": [
+            {
+              "$ref": "common-definitions.schema.json#/$defs/artifact_ref"
+            },
+            {
+              "properties": {
+                "hash_scope": {"const": "canonical_document"}
+              }
+            }
+          ]
+        },
+        "previous_handoff_hash": {
+          "$ref": "common-definitions.schema.json#/$defs/sha256"
+        },
+        "lineage_parents": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common-definitions.schema.json#/$defs/lineage_parent"
+          }
+        },
+        "inheritance_sources": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common-definitions.schema.json#/$defs/inheritance_source"
+          }
+        },
+        "memory_heads": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common-definitions.schema.json#/$defs/artifact_ref"
+          }
+        },
+        "ht_heads": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["log_id", "t", "msg_sha256"],
+            "properties": {
+              "log_id": {
+                "$ref": "common-definitions.schema.json#/$defs/log_id"
+              },
+              "t": {"type": "integer", "minimum": 0},
+              "msg_sha256": {
+                "$ref": "common-definitions.schema.json#/$defs/sha256"
+              }
+            }
+          }
+        },
+        "fork_intent": {
+          "enum": ["none", "explicit_fork", "merge_input"]
+        },
+        "constraints": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "contains": {"const": "manual_acceptance_required"},
+          "minContains": 1,
+          "allOf": [
+            {
+              "contains": {"const": "verify_before_use"},
+              "minContains": 1
+            },
+            {
+              "contains": {"const": "no_public_commitment"},
+              "minContains": 1
+            }
+          ],
+          "items": {
+            "enum": [
+              "manual_acceptance_required",
+              "no_public_commitment",
+              "verify_before_use"
+            ]
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "recipient_binding": {
+                "properties": {"mode": {"const": "unbound"}},
+                "required": ["mode"]
+              }
+            },
+            "required": ["recipient_binding"]
+          },
+          "then": {
+            "required": ["expires_at"]
+          }
+        },
+        {
+          "if": {
+            "properties": {"sequence": {"const": 0}},
+            "required": ["sequence"]
+          },
+          "then": {
+            "properties": {
+              "previous_handoff_hash": {
+                "$ref": "common-definitions.schema.json#/$defs/zero_sha256"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "previous_handoff_hash": {
+                "$ref": "common-definitions.schema.json#/$defs/nonzero_sha256"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "responsibility": {
+      "allOf": [
+        {
+          "$ref": "common-definitions.schema.json#/$defs/responsibility"
+        },
+        {
+          "properties": {
+            "event_index": {"type": "integer", "minimum": 1},
+            "previous_head": {
+              "$ref": "common-definitions.schema.json#/$defs/nonzero_sha256"
+            }
+          }
+        }
+      ]
+    },
+    "document_hash": {
+      "$ref": "common-definitions.schema.json#/$defs/document_hash"
+    },
+    "resulting_head": {
+      "$ref": "common-definitions.schema.json#/$defs/sha256"
+    },
+    "proofs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common-definitions.schema.json#/$defs/proof"
+      }
+    }
+  }
+}

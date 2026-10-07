@@ -1,0 +1,2 @@
+{"t":0,"turn":0,"role":"user","timestamp":"2032-01-01T00:00:00Z","mode":"TECH","L_t":1,"w_t":"Synthetic request: verify a fictional record.","y_t":"","notes":"Generated fictional fixture, not a conversation export."}
+{"t":1,"turn":0,"role":"assistant","timestamp":"2032-01-01T00:00:01Z","mode":"TECH","L_t":1,"w_t":"","y_t":"Synthetic reply: report the verification result.","notes":"Generated fictional fixture, not a conversation export."}

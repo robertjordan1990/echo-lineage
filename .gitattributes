@@ -1,0 +1,21 @@
+# Echo-Lite — line-ending discipline for reproducible hashing
+#
+# Goal: prevent CRLF conversion from changing hashes of deterministic artefacts
+# (especially LEDGER__sha256.txt) on Windows checkouts.
+
+# Deterministic integrity artefacts
+public_kit/PUBLIC_PACK/LEDGER__sha256.txt text eol=lf
+public_kit/PUBLIC_PACK/FINGERPRINT.txt text eol=lf
+
+# Scripts
+*.sh text eol=lf
+
+# Common text formats
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.py text eol=lf
+*.tex text eol=lf

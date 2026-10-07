@@ -1,0 +1,49 @@
+{
+  "body": {
+    "acceptance_id": "urn:echo:acceptance:00000000-0000-4000-8000-000000000101",
+    "decided_at": "2032-01-02T03:04:06Z",
+    "decision": "accepted",
+    "decision_actor": {
+      "decision_actor_id": "urn:echo:decision-actor:00000000-0000-4000-8000-000000000001",
+      "decision_mode": "human_operator"
+    },
+    "decision_nonce": "12121212121212121212121212121212",
+    "effect": "activating",
+    "genesis_root_document_hash": "d9648527fae724f539d65f0e61200202795e34457ab5a062fc0aed096b228d0c",
+    "installation_id": "urn:echo:installation:00000000-0000-4000-8000-000000000101",
+    "recording_operator": {
+      "confirmation_scope": "recorded_decision_without_reassignment",
+      "confirmed_at": "2032-01-02T03:04:06Z",
+      "operator_actor_id": "urn:echo:decision-actor:00000000-0000-4000-8000-000000000003",
+      "role": "recording_operator"
+    },
+    "reservations": [],
+    "subject": {
+      "trajectory_root_artifact_id": "urn:echo:artifact:00000000-0000-4000-8000-000000001101",
+      "trajectory_root_document_hash": "d9648527fae724f539d65f0e61200202795e34457ab5a062fc0aed096b228d0c"
+    },
+    "target_results": [
+      {
+        "artifact_id": "urn:echo:artifact:00000000-0000-4000-8000-000000001101",
+        "criticality": "critical_root",
+        "expected_sha256": "d9648527fae724f539d65f0e61200202795e34457ab5a062fc0aed096b228d0c",
+        "status": "target_present_verified"
+      }
+    ],
+    "trajectory_id": "urn:echo:trajectory:00000000-0000-4000-8000-000000000101",
+    "verification_report_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "document_hash": {
+    "algorithm": "sha256",
+    "value": "bde471ff2b851dc29f77e7c3e01b11b38319643450666a837ee7a586c44b0c56"
+  },
+  "document_type": "lineage_acceptance",
+  "proofs": [],
+  "protocol": "echo-lineage/v1",
+  "responsibility": {
+    "chain_id": "urn:echo:responsibility-chain:00000000-0000-4000-8000-000000000101",
+    "event_index": 1,
+    "previous_head": "87723334dd2f5725002be1bee57e52cc8ba7ce05f5f48b02bd7b62d81a93c21c"
+  },
+  "resulting_head": "d03b116c5b287f08d57a36eb802ad7350b93d9bc1e472d14ba66bad9af6b4093"
+}

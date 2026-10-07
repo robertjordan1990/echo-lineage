@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/echo-lineage/v1/trajectory-root.schema.json",
+  "title": "TRAJECTORY_ROOT.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "document_type",
+    "body",
+    "responsibility",
+    "document_hash",
+    "resulting_head",
+    "proofs"
+  ],
+  "properties": {
+    "protocol": {"const": "echo-lineage/v1"},
+    "document_type": {"const": "trajectory_root"},
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trajectory_id",
+        "genesis_root_document_hash",
+        "installation_id",
+        "created_by_runtime_session_id",
+        "origin_kind",
+        "lineage_parents",
+        "inheritance_sources",
+        "fork_policy",
+        "acceptance_required",
+        "signature_policy",
+        "created_at"
+      ],
+      "properties": {
+        "trajectory_id": {
+          "$ref": "common-definitions.schema.json#/$defs/trajectory_id"
+        },
+        "genesis_root_document_hash": {
+          "oneOf": [
+            {"$ref": "common-definitions.schema.json#/$defs/sha256"},
+            {"type": "null"}
+          ]
+        },
+        "installation_id": {
+          "$ref": "common-definitions.schema.json#/$defs/installation_id"
+        },
+        "created_by_runtime_session_id": {
+          "oneOf": [
+            {
+              "$ref": "common-definitions.schema.json#/$defs/runtime_session_id"
+            },
+            {"type": "null"}
+          ]
+        },
+        "origin_kind": {
+          "enum": [
+            "independent_no_lineage_claim",
+            "continuation",
+            "explicit_fork",
+            "merge"
+          ]
+        },
+        "lineage_parents": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common-definitions.schema.json#/$defs/lineage_parent"
+          }
+        },
+        "inheritance_sources": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common-definitions.schema.json#/$defs/inheritance_source"
+          }
+        },
+        "fork_policy": {"const": "explicit_only"},
+        "acceptance_required": {"const": true},
+        "signature_policy": {
+          "enum": ["optional", "required", "out_of_band"]
+        },
+        "created_at": {
+          "$ref": "common-definitions.schema.json#/$defs/timestamp"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "origin_kind": {"const": "independent_no_lineage_claim"}
+            },
+            "required": ["origin_kind"]
+          },
+          "then": {
+            "properties": {
+              "genesis_root_document_hash": {"type": "null"},
+              "lineage_parents": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "origin_kind": {"const": "continuation"}
+            },
+            "required": ["origin_kind"]
+          },
+          "then": {
+            "properties": {
+              "genesis_root_document_hash": {
+                "$ref": "common-definitions.schema.json#/$defs/sha256"
+              },
+              "lineage_parents": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "properties": {
+                    "relation": {"const": "predecessor"}
+                  },
+                  "required": ["relation"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "origin_kind": {"const": "explicit_fork"}
+            },
+            "required": ["origin_kind"]
+          },
+          "then": {
+            "properties": {
+              "genesis_root_document_hash": {"type": "null"},
+              "lineage_parents": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "properties": {
+                    "relation": {"const": "fork_origin"}
+                  },
+                  "required": ["relation"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "origin_kind": {"const": "merge"}
+            },
+            "required": ["origin_kind"]
+          },
+          "then": {
+            "properties": {
+              "genesis_root_document_hash": {"type": "null"},
+              "lineage_parents": {
+                "minItems": 2,
+                "items": {
+                  "properties": {
+                    "relation": {"const": "merge_input"}
+                  },
+                  "required": ["relation"]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "responsibility": {
+      "allOf": [
+        {
+          "$ref": "common-definitions.schema.json#/$defs/responsibility"
+        },
+        {
+          "properties": {
+            "event_index": {"const": 0},
+            "previous_head": {
+              "$ref": "common-definitions.schema.json#/$defs/zero_sha256"
+            }
+          }
+        }
+      ]
+    },
+    "document_hash": {
+      "$ref": "common-definitions.schema.json#/$defs/document_hash"
+    },
+    "resulting_head": {
+      "$ref": "common-definitions.schema.json#/$defs/sha256"
+    },
+    "proofs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common-definitions.schema.json#/$defs/proof"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "body": {
+            "properties": {
+              "signature_policy": {"const": "required"}
+            },
+            "required": ["signature_policy"]
+          }
+        },
+        "required": ["body"]
+      },
+      "then": {
+        "properties": {
+          "proofs": {"minItems": 1}
+        }
+      }
+    }
+  ]
+}

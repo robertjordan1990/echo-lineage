@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/echo-lineage/v1/common-definitions.schema.json",
+  "title": "echo-lineage/v1 common definitions",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "zero_sha256": {
+      "const": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "nonzero_sha256": {
+      "type": "string",
+      "pattern": "^(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:(?:0[0-9]|1[0-3]):[0-5][0-9]|14:00))$"
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32,}$"
+    },
+    "protocol_code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]{0,127}$"
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "trajectory_id": {
+      "type": "string",
+      "pattern": "^urn:echo:trajectory:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "installation_id": {
+      "type": "string",
+      "pattern": "^urn:echo:installation:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "runtime_session_id": {
+      "type": "string",
+      "pattern": "^urn:echo:runtime-session:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "decision_actor_id": {
+      "type": "string",
+      "pattern": "^urn:echo:decision-actor:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^urn:echo:artifact:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "acceptance_id": {
+      "type": "string",
+      "pattern": "^urn:echo:acceptance:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "handoff_id": {
+      "type": "string",
+      "pattern": "^urn:echo:handoff:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "log_id": {
+      "type": "string",
+      "pattern": "^urn:echo:log:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "responsibility_chain_id": {
+      "type": "string",
+      "pattern": "^urn:echo:responsibility-chain:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^urn:echo:key:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "criticality": {
+      "enum": ["critical_root", "required_source", "supporting", "optional"]
+    },
+    "target_status": {
+      "enum": [
+        "target_present_verified",
+        "ledger_known_target_missing",
+        "hash_mismatch",
+        "target_invalid",
+        "verification_not_attempted",
+        "target_missing_unanchored"
+      ]
+    },
+    "decision": {
+      "enum": [
+        "accepted",
+        "accepted_with_reservations",
+        "declined",
+        "quarantined_integrity_failure"
+      ]
+    },
+    "ledger_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ledger_artifact_id", "ledger_sha256"],
+      "properties": {
+        "ledger_artifact_id": {"$ref": "#/$defs/artifact_id"},
+        "ledger_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "sha256", "hash_scope"],
+      "properties": {
+        "artifact_id": {"$ref": "#/$defs/artifact_id"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "hash_scope": {
+          "enum": ["file_bytes", "canonical_document", "ciphertext", "echohash_head"]
+        },
+        "media_type": {"type": "string", "minLength": 1},
+        "ledger_ref": {"$ref": "#/$defs/ledger_ref"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["ledger_ref"]},
+          "then": {
+            "properties": {
+              "hash_scope": {"enum": ["file_bytes", "ciphertext"]}
+            }
+          }
+        }
+      ]
+    },
+    "lineage_parent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relation",
+        "parent_trajectory_id",
+        "parent_genesis_root_document_hash",
+        "parent_installation_id",
+        "handoff_document_hash",
+        "parent_responsibility_head"
+      ],
+      "properties": {
+        "relation": {"enum": ["predecessor", "fork_origin", "merge_input"]},
+        "parent_trajectory_id": {"$ref": "#/$defs/trajectory_id"},
+        "parent_genesis_root_document_hash": {"$ref": "#/$defs/sha256"},
+        "parent_installation_id": {"$ref": "#/$defs/installation_id"},
+        "handoff_document_hash": {"$ref": "#/$defs/sha256"},
+        "parent_responsibility_head": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "inheritance_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_role", "artifact", "criticality", "required_for_acceptance"],
+      "properties": {
+        "source_role": {"enum": ["memory", "governance", "runtime", "archive", "canon"]},
+        "artifact": {"$ref": "#/$defs/artifact_ref"},
+        "criticality": {"$ref": "#/$defs/criticality"},
+        "required_for_acceptance": {"type": "boolean"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "criticality": {"enum": ["critical_root", "required_source"]}
+            },
+            "required": ["criticality"]
+          },
+          "then": {
+            "properties": {
+              "required_for_acceptance": {"const": true}
+            }
+          },
+          "else": {
+            "properties": {
+              "required_for_acceptance": {"const": false}
+            }
+          }
+        }
+      ]
+    },
+    "responsibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chain_id", "event_index", "previous_head"],
+      "properties": {
+        "chain_id": {"$ref": "#/$defs/responsibility_chain_id"},
+        "event_index": {"type": "integer", "minimum": 0},
+        "previous_head": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"event_index": {"const": 0}},
+            "required": ["event_index"]
+          },
+          "then": {
+            "properties": {
+              "previous_head": {"$ref": "#/$defs/zero_sha256"}
+            }
+          },
+          "else": {
+            "properties": {
+              "previous_head": {"$ref": "#/$defs/nonzero_sha256"}
+            }
+          }
+        }
+      ]
+    },
+    "document_hash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": {"const": "sha256"},
+        "value": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "signed_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol",
+        "proof_scope",
+        "document_type",
+        "trajectory_id",
+        "installation_id",
+        "chain_id",
+        "event_index",
+        "previous_head",
+        "document_hash",
+        "resulting_head"
+      ],
+      "properties": {
+        "protocol": {"const": "echo-lineage/v1"},
+        "proof_scope": {"const": "responsibility_head"},
+        "document_type": {
+          "enum": ["trajectory_root", "lineage_acceptance", "handoff"]
+        },
+        "trajectory_id": {"$ref": "#/$defs/trajectory_id"},
+        "installation_id": {"$ref": "#/$defs/installation_id"},
+        "chain_id": {"$ref": "#/$defs/responsibility_chain_id"},
+        "event_index": {"type": "integer", "minimum": 0},
+        "previous_head": {"$ref": "#/$defs/sha256"},
+        "document_hash": {"$ref": "#/$defs/sha256"},
+        "resulting_head": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"event_index": {"const": 0}},
+            "required": ["event_index"]
+          },
+          "then": {
+            "properties": {
+              "previous_head": {"$ref": "#/$defs/zero_sha256"}
+            }
+          },
+          "else": {
+            "properties": {
+              "previous_head": {"$ref": "#/$defs/nonzero_sha256"}
+            }
+          }
+        }
+      ]
+    },
+    "proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proof_type", "algorithm", "key_id", "signed_payload", "signature"],
+      "properties": {
+        "proof_type": {"const": "responsibility_head"},
+        "algorithm": {"const": "ed25519"},
+        "key_id": {"$ref": "#/$defs/key_id"},
+        "signed_payload": {"$ref": "#/$defs/signed_payload"},
+        "signature": {
+          "type": "string",
+          "pattern": "^(?:[A-Za-z0-9+/]{4}){21}[A-Za-z0-9+/]{2}==$"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "body": {
+    "acceptance_required": true,
+    "created_at": "2032-01-02T03:04:05Z",
+    "created_by_runtime_session_id": "urn:echo:runtime-session:00000000-0000-4000-8000-000000000101",
+    "fork_policy": "explicit_only",
+    "genesis_root_document_hash": null,
+    "inheritance_sources": [],
+    "installation_id": "urn:echo:installation:00000000-0000-4000-8000-000000000101",
+    "lineage_parents": [],
+    "origin_kind": "independent_no_lineage_claim",
+    "signature_policy": "optional",
+    "trajectory_id": "urn:echo:trajectory:00000000-0000-4000-8000-000000000101"
+  },
+  "document_hash": {
+    "algorithm": "sha256",
+    "value": "d9648527fae724f539d65f0e61200202795e34457ab5a062fc0aed096b228d0c"
+  },
+  "document_type": "trajectory_root",
+  "proofs": [],
+  "protocol": "echo-lineage/v1",
+  "responsibility": {
+    "chain_id": "urn:echo:responsibility-chain:00000000-0000-4000-8000-000000000101",
+    "event_index": 0,
+    "previous_head": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "resulting_head": "87723334dd2f5725002be1bee57e52cc8ba7ce05f5f48b02bd7b62d81a93c21c"
+}

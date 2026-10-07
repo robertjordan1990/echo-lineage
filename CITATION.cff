@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: "echo-lineage: a read-only verifier for explicit agent lineage and handoff claims"
+message: "Cite Robert Jordan as the project pseudonym, together with the repository and exact commit used; this is not attribution to a separate person."
+type: software
+authors:
+  - name: "Robert Jordan (project pseudonym)"
+repository-code: "https://github.com/robertjordan1990/echo-lineage"
+license: "Apache-2.0"
+keywords:
+  - agent provenance
+  - lineage verification
+  - handoff evidence
+  - explicit acceptance
+  - reproducibility
+abstract: >-
+  A transport-neutral, read-only verifier that separates consistency checks
+  for lineage and handoff evidence from attributed acceptance and activation.
+  Maintained under the project pseudonym Robert Jordan and developed through
+  documented human–AI collaboration within fAIR DecentrAIzation. The pseudonym
+  does not identify a separate person or assign copyright ownership. This
+  publication snapshot makes no priority claim and does not establish a date
+  of first invention. Stage 2A does not authenticate actors or import state.

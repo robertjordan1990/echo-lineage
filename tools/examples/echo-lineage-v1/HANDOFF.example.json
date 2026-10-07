@@ -1,0 +1,66 @@
+{
+  "body": {
+    "constraints": [
+      "manual_acceptance_required",
+      "verify_before_use",
+      "no_public_commitment"
+    ],
+    "fork_intent": "none",
+    "genesis_root_document_hash": "d9648527fae724f539d65f0e61200202795e34457ab5a062fc0aed096b228d0c",
+    "handoff_id": "urn:echo:handoff:00000000-0000-4000-8000-000000000101",
+    "handoff_nonce": "34343434343434343434343434343434",
+    "ht_heads": [
+      {
+        "log_id": "urn:echo:log:00000000-0000-4000-8000-000000000001",
+        "msg_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "t": 7
+      }
+    ],
+    "inheritance_sources": [],
+    "issued_at": "2032-01-02T03:04:07Z",
+    "issuer_installation_id": "urn:echo:installation:00000000-0000-4000-8000-000000000101",
+    "issuer_runtime_session_id": "urn:echo:runtime-session:00000000-0000-4000-8000-000000000001",
+    "latest_acceptance_ref": {
+      "artifact_id": "urn:echo:artifact:00000000-0000-4000-8000-000000000011",
+      "hash_scope": "canonical_document",
+      "media_type": "application/json",
+      "sha256": "0953593270f732eb03a8c472dac5ee41db6d31308ac5ae5bf6014714ab69ecbf"
+    },
+    "lineage_parents": [],
+    "lineage_root_ref": {
+      "artifact_id": "urn:echo:artifact:00000000-0000-4000-8000-000000000010",
+      "hash_scope": "canonical_document",
+      "media_type": "application/json",
+      "sha256": "d850a25bdadc03fc8b43583062a9d2a1d6782ea249d78793d6a2cedc671268ca"
+    },
+    "memory_heads": [
+      {
+        "artifact_id": "urn:echo:artifact:00000000-0000-4000-8000-000000000013",
+        "hash_scope": "file_bytes",
+        "media_type": "application/octet-stream",
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    ],
+    "previous_handoff_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "recipient_binding": {
+      "mode": "bound",
+      "recipient_installation_id": "urn:echo:installation:00000000-0000-4000-8000-000000000102"
+    },
+    "recording_operator_id": "urn:echo:decision-actor:00000000-0000-4000-8000-000000000003",
+    "sequence": 0,
+    "trajectory_id": "urn:echo:trajectory:00000000-0000-4000-8000-000000000101"
+  },
+  "document_hash": {
+    "algorithm": "sha256",
+    "value": "910d9fcc98590e497712e9db242b5484a0df1f4caf2e4bbf8fff29e5903439a8"
+  },
+  "document_type": "handoff",
+  "proofs": [],
+  "protocol": "echo-lineage/v1",
+  "responsibility": {
+    "chain_id": "urn:echo:responsibility-chain:00000000-0000-4000-8000-000000000101",
+    "event_index": 2,
+    "previous_head": "d03b116c5b287f08d57a36eb802ad7350b93d9bc1e472d14ba66bad9af6b4093"
+  },
+  "resulting_head": "51df50043090f3b70d73c71acdbca9f4d5eb5168aeb9e1dee1934be941330670"
+}

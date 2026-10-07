@@ -1,0 +1,704 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/echo-lineage/v1/verification-report.schema.json",
+  "title": "echo-lineage/v1 read-only verification report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "operation", "status", "semantics"],
+  "properties": {
+    "protocol": {"const": "echo-lineage/v1"},
+    "operation": {"const": "verify"},
+    "document_type": {
+      "enum": ["trajectory_root", "lineage_acceptance", "handoff"]
+    },
+    "document_hash": {
+      "$ref": "common-definitions.schema.json#/$defs/sha256"
+    },
+    "resulting_head": {
+      "$ref": "common-definitions.schema.json#/$defs/sha256"
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "verified_with_unavailable_targets",
+        "structure_valid_attribution_unverified",
+        "integrity_failure",
+        "invalid"
+      ]
+    },
+    "target_results": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifact_id",
+          "criticality",
+          "expected_sha256",
+          "status",
+          "message"
+        ],
+        "properties": {
+          "artifact_id": {
+            "$ref": "common-definitions.schema.json#/$defs/artifact_id"
+          },
+          "criticality": {
+            "$ref": "common-definitions.schema.json#/$defs/criticality"
+          },
+          "expected_sha256": {
+            "$ref": "common-definitions.schema.json#/$defs/sha256"
+          },
+          "observed_sha256": {
+            "$ref": "common-definitions.schema.json#/$defs/sha256"
+          },
+          "status": {
+            "$ref": "common-definitions.schema.json#/$defs/target_status"
+          },
+          "message": {"type": "string", "minLength": 1}
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": ["target_present_verified", "hash_mismatch"]
+                }
+              },
+              "required": ["status"]
+            },
+            "then": {
+              "required": ["observed_sha256"]
+            }
+          }
+        ]
+      }
+    },
+    "allowed_future_decisions": {
+      "type": "array",
+      "enum": [
+        ["accepted", "declined"],
+        ["accepted_with_reservations", "declined"],
+        [
+          "accepted_with_reservations",
+          "declined",
+          "quarantined_integrity_failure"
+        ],
+        ["declined"],
+        ["declined", "quarantined_integrity_failure"]
+      ]
+    },
+    "proof_status": {
+      "enum": ["unsigned", "structure_valid_signature_unverified"]
+    },
+    "evidence_status": {
+      "enum": ["complete", "incomplete"]
+    },
+    "evidence_errors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "trajectory_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trajectory_id", "genesis_root_document_hash"],
+      "properties": {
+        "trajectory_id": {
+          "$ref": "common-definitions.schema.json#/$defs/trajectory_id"
+        },
+        "genesis_root_document_hash": {
+          "$ref": "common-definitions.schema.json#/$defs/sha256"
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "semantics": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "VERIFY SUCCESS != ACCEPTED",
+          "HANDOFF VERIFIED != IMPORTED",
+          "TARGET MISSING != HASH MISMATCH"
+        ]
+      },
+      "allOf": [
+        {
+          "contains": {"const": "VERIFY SUCCESS != ACCEPTED"},
+          "minContains": 1
+        },
+        {
+          "contains": {"const": "HANDOFF VERIFIED != IMPORTED"},
+          "minContains": 1
+        },
+        {
+          "contains": {"const": "TARGET MISSING != HASH MISMATCH"},
+          "minContains": 1
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "proof_status": {
+            "const": "structure_valid_signature_unverified"
+          }
+        },
+        "required": ["proof_status"]
+      },
+      "then": {
+        "properties": {
+          "evidence_status": {"const": "incomplete"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {"const": "lineage_acceptance"}
+        },
+        "required": ["document_type"]
+      },
+      "then": {
+        "properties": {
+          "evidence_status": {"const": "incomplete"},
+          "allowed_future_decisions": {
+            "enum": [
+              ["declined"],
+              ["declined", "quarantined_integrity_failure"]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "invalid"}},
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["errors"]
+      },
+      "else": {
+        "required": [
+          "document_type",
+          "document_hash",
+          "resulting_head",
+          "target_results",
+          "allowed_future_decisions",
+          "proof_status",
+          "evidence_status",
+          "evidence_errors"
+        ],
+        "not": {"required": ["errors"]}
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "verified"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "evidence_status": {"const": "complete"},
+          "target_results": {
+            "items": {
+              "type": "object",
+              "properties": {
+                "status": {"const": "target_present_verified"}
+              },
+              "required": ["status"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "structure_valid_attribution_unverified"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "document_type": {"const": "lineage_acceptance"},
+          "evidence_status": {"const": "incomplete"},
+          "evidence_errors": {"minItems": 1},
+          "allowed_future_decisions": {
+            "enum": [
+              ["declined"],
+              ["declined", "quarantined_integrity_failure"]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {"const": "verified_with_unavailable_targets"}
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "allOf": [
+          {
+            "properties": {
+              "document_type": {
+                "enum": ["trajectory_root", "handoff"]
+              }
+            }
+          },
+          {
+            "properties": {
+              "target_results": {
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "target_present_verified",
+                        "ledger_known_target_missing",
+                        "verification_not_attempted",
+                        "target_missing_unanchored"
+                      ]
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          {
+            "anyOf": [
+              {
+                "properties": {
+                  "target_results": {
+                    "contains": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "enum": [
+                            "ledger_known_target_missing",
+                            "verification_not_attempted",
+                            "target_missing_unanchored"
+                          ]
+                        }
+                      },
+                      "required": ["status"]
+                    },
+                    "minContains": 1
+                  }
+                },
+                "required": ["target_results"]
+              },
+              {
+                "properties": {
+                  "evidence_status": {"const": "incomplete"}
+                },
+                "required": ["evidence_status"]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "integrity_failure"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "target_results": {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "enum": ["hash_mismatch", "target_invalid"]
+                }
+              },
+              "required": ["status"]
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "target_results": {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "enum": [
+                    "verification_not_attempted",
+                    "target_missing_unanchored"
+                  ]
+                }
+              },
+              "required": ["status"]
+            }
+          }
+        },
+        "required": ["document_type", "target_results"]
+      },
+      "then": {
+        "properties": {
+          "allowed_future_decisions": {
+            "items": {
+              "enum": [
+                "declined",
+                "quarantined_integrity_failure"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "allowed_future_decisions": {
+            "contains": {
+              "const": "quarantined_integrity_failure"
+            }
+          }
+        },
+        "required": ["document_type", "allowed_future_decisions"]
+      },
+      "then": {
+        "properties": {
+          "target_results": {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "enum": ["hash_mismatch", "target_invalid"]
+                }
+              },
+              "required": ["status"]
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "target_results": {"maxItems": 0},
+          "evidence_status": {"const": "complete"}
+        },
+        "required": ["document_type", "target_results", "evidence_status"]
+      },
+      "then": {
+        "properties": {
+          "allowed_future_decisions": {
+            "maxItems": 2,
+            "contains": {"const": "accepted"},
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "target_results": {
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "status": {"const": "target_present_verified"}
+              },
+              "required": ["status"]
+            }
+          },
+          "evidence_status": {"const": "complete"}
+        },
+        "required": ["document_type", "target_results", "evidence_status"]
+      },
+      "then": {
+        "properties": {
+          "allowed_future_decisions": {
+            "maxItems": 2,
+            "contains": {"const": "accepted"},
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "target_results": {
+            "minItems": 1,
+            "contains": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "enum": [
+                    "ledger_known_target_missing",
+                    "hash_mismatch",
+                    "target_invalid"
+                  ]
+                }
+              },
+              "required": ["status"]
+            },
+            "allOf": [
+              {
+                "not": {
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "criticality": {
+                        "enum": ["critical_root", "required_source"]
+                      },
+                      "status": {
+                        "enum": ["hash_mismatch", "target_invalid"]
+                      }
+                    },
+                    "required": ["criticality", "status"]
+                  }
+                }
+              },
+              {
+                "not": {
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "enum": [
+                          "verification_not_attempted",
+                          "target_missing_unanchored"
+                        ]
+                      }
+                    },
+                    "required": ["status"]
+                  }
+                }
+              }
+            ]
+          },
+          "evidence_status": {"const": "complete"}
+        },
+        "required": ["document_type", "target_results", "evidence_status"]
+      },
+      "then": {
+        "properties": {
+          "allowed_future_decisions": {
+            "contains": {"const": "accepted_with_reservations"},
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "allowed_future_decisions": {
+            "contains": {
+              "enum": ["accepted", "accepted_with_reservations"]
+            }
+          }
+        },
+        "required": ["allowed_future_decisions"]
+      },
+      "then": {
+        "properties": {
+          "evidence_status": {"const": "complete"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidence_status": {"const": "complete"}
+        },
+        "required": ["evidence_status"]
+      },
+      "then": {
+        "properties": {
+          "evidence_errors": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidence_status": {"const": "incomplete"}
+        },
+        "required": ["evidence_status"]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "enum": [
+              "verified_with_unavailable_targets",
+              "structure_valid_attribution_unverified",
+              "integrity_failure"
+            ]
+          },
+          "evidence_errors": {"minItems": 1}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {"const": "trajectory_root"}
+        },
+        "required": ["document_type"]
+      },
+      "then": {
+        "required": ["trajectory_identity"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["lineage_acceptance", "handoff"]
+          }
+        },
+        "required": ["document_type"]
+      },
+      "then": {
+        "not": {"required": ["trajectory_identity"]}
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "target_results": {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "criticality": {
+                  "enum": ["critical_root", "required_source"]
+                },
+                "status": {
+                  "enum": [
+                    "hash_mismatch",
+                    "target_invalid",
+                    "verification_not_attempted",
+                    "target_missing_unanchored"
+                  ]
+                }
+              },
+              "required": ["criticality", "status"]
+            }
+          }
+        },
+        "required": ["document_type", "target_results"]
+      },
+      "then": {
+        "properties": {
+          "allowed_future_decisions": {
+            "items": {
+              "enum": [
+                "declined",
+                "quarantined_integrity_failure"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "target_results": {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "enum": ["hash_mismatch", "target_invalid"]
+                }
+              },
+              "required": ["status"]
+            }
+          }
+        },
+        "required": ["document_type", "target_results"]
+      },
+      "then": {
+        "properties": {
+          "allowed_future_decisions": {
+            "contains": {
+              "const": "quarantined_integrity_failure"
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "document_type": {
+            "enum": ["trajectory_root", "handoff"]
+          },
+          "allowed_future_decisions": {
+            "contains": {"const": "accepted"}
+          }
+        },
+        "required": ["document_type", "allowed_future_decisions"]
+      },
+      "then": {
+        "properties": {
+          "target_results": {
+            "items": {
+              "type": "object",
+              "properties": {
+                "status": {"const": "target_present_verified"}
+              },
+              "required": ["status"]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

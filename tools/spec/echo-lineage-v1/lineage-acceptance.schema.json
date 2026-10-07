@@ -1,0 +1,574 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/echo-lineage/v1/lineage-acceptance.schema.json",
+  "title": "LINEAGE_ACCEPTANCE.json",
+  "description": "Structural contract only. Schema validity does not authenticate the decision actor or the artifact named by verification_report_hash.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "document_type",
+    "body",
+    "responsibility",
+    "document_hash",
+    "resulting_head",
+    "proofs"
+  ],
+  "properties": {
+    "protocol": {"const": "echo-lineage/v1"},
+    "document_type": {"const": "lineage_acceptance"},
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acceptance_id",
+        "trajectory_id",
+        "genesis_root_document_hash",
+        "installation_id",
+        "subject",
+        "decision",
+        "decision_actor",
+        "recording_operator",
+        "verification_report_hash",
+        "target_results",
+        "reservations",
+        "decision_nonce",
+        "decided_at",
+        "effect"
+      ],
+      "properties": {
+        "acceptance_id": {
+          "$ref": "common-definitions.schema.json#/$defs/acceptance_id"
+        },
+        "trajectory_id": {
+          "$ref": "common-definitions.schema.json#/$defs/trajectory_id"
+        },
+        "genesis_root_document_hash": {
+          "$ref": "common-definitions.schema.json#/$defs/sha256"
+        },
+        "installation_id": {
+          "$ref": "common-definitions.schema.json#/$defs/installation_id"
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "trajectory_root_artifact_id",
+            "trajectory_root_document_hash"
+          ],
+          "properties": {
+            "trajectory_root_artifact_id": {
+              "$ref": "common-definitions.schema.json#/$defs/artifact_id"
+            },
+            "trajectory_root_document_hash": {
+              "$ref": "common-definitions.schema.json#/$defs/sha256"
+            },
+            "handoff_artifact_id": {
+              "$ref": "common-definitions.schema.json#/$defs/artifact_id"
+            },
+            "handoff_document_hash": {
+              "$ref": "common-definitions.schema.json#/$defs/sha256"
+            }
+          },
+          "dependentRequired": {
+            "handoff_artifact_id": ["handoff_document_hash"],
+            "handoff_document_hash": ["handoff_artifact_id"]
+          }
+        },
+        "decision": {
+          "$ref": "common-definitions.schema.json#/$defs/decision"
+        },
+        "decision_actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision_actor_id", "decision_mode"],
+          "properties": {
+            "decision_actor_id": {
+              "$ref": "common-definitions.schema.json#/$defs/decision_actor_id"
+            },
+            "decision_mode": {
+              "enum": [
+                "model_session",
+                "human_operator",
+                "joint_human_model",
+                "system_policy",
+                "imported_historical_claim"
+              ]
+            },
+            "runtime_session_id": {
+              "$ref": "common-definitions.schema.json#/$defs/runtime_session_id"
+            },
+            "human_actor_id": {
+              "$ref": "common-definitions.schema.json#/$defs/decision_actor_id"
+            },
+            "policy_artifact_ref": {
+              "$ref": "common-definitions.schema.json#/$defs/artifact_ref"
+            },
+            "historical_claim_artifact_ref": {
+              "$ref": "common-definitions.schema.json#/$defs/artifact_ref"
+            },
+            "decision_evidence_ref": {
+              "$ref": "common-definitions.schema.json#/$defs/artifact_ref"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision_mode": {"const": "model_session"}
+                },
+                "required": ["decision_mode"]
+              },
+              "then": {
+                "required": ["runtime_session_id", "decision_evidence_ref"],
+                "not": {
+                  "anyOf": [
+                    {"required": ["human_actor_id"]},
+                    {"required": ["policy_artifact_ref"]},
+                    {"required": ["historical_claim_artifact_ref"]}
+                  ]
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision_mode": {"const": "joint_human_model"}
+                },
+                "required": ["decision_mode"]
+              },
+              "then": {
+                "required": [
+                  "runtime_session_id",
+                  "human_actor_id",
+                  "decision_evidence_ref"
+                ],
+                "not": {
+                  "anyOf": [
+                    {"required": ["policy_artifact_ref"]},
+                    {"required": ["historical_claim_artifact_ref"]}
+                  ]
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision_mode": {"const": "human_operator"}
+                },
+                "required": ["decision_mode"]
+              },
+              "then": {
+                "not": {
+                  "anyOf": [
+                    {"required": ["runtime_session_id"]},
+                    {"required": ["human_actor_id"]},
+                    {"required": ["policy_artifact_ref"]},
+                    {"required": ["historical_claim_artifact_ref"]}
+                  ]
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision_mode": {"const": "system_policy"}
+                },
+                "required": ["decision_mode"]
+              },
+              "then": {
+                "required": ["policy_artifact_ref"],
+                "not": {
+                  "anyOf": [
+                    {"required": ["runtime_session_id"]},
+                    {"required": ["human_actor_id"]},
+                    {"required": ["historical_claim_artifact_ref"]}
+                  ]
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "decision_mode": {"const": "imported_historical_claim"}
+                },
+                "required": ["decision_mode"]
+              },
+              "then": {
+                "required": ["historical_claim_artifact_ref"],
+                "not": {
+                  "anyOf": [
+                    {"required": ["runtime_session_id"]},
+                    {"required": ["human_actor_id"]},
+                    {"required": ["policy_artifact_ref"]}
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "recording_operator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "operator_actor_id",
+            "role",
+            "confirmed_at",
+            "confirmation_scope"
+          ],
+          "properties": {
+            "operator_actor_id": {
+              "$ref": "common-definitions.schema.json#/$defs/decision_actor_id"
+            },
+            "role": {"const": "recording_operator"},
+            "confirmed_at": {
+              "$ref": "common-definitions.schema.json#/$defs/timestamp"
+            },
+            "confirmation_scope": {
+              "const": "recorded_decision_without_reassignment"
+            }
+          }
+        },
+        "verification_report_hash": {
+          "$ref": "common-definitions.schema.json#/$defs/sha256"
+        },
+        "target_results": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "contains": {
+            "type": "object",
+            "properties": {
+              "criticality": {"const": "critical_root"}
+            },
+            "required": [
+              "artifact_id",
+              "criticality",
+              "expected_sha256"
+            ]
+          },
+          "minContains": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_id",
+              "criticality",
+              "expected_sha256",
+              "status"
+            ],
+            "properties": {
+              "artifact_id": {
+                "$ref": "common-definitions.schema.json#/$defs/artifact_id"
+              },
+              "criticality": {
+                "$ref": "common-definitions.schema.json#/$defs/criticality"
+              },
+              "expected_sha256": {
+                "$ref": "common-definitions.schema.json#/$defs/sha256"
+              },
+              "status": {
+                "$ref": "common-definitions.schema.json#/$defs/target_status"
+              },
+              "reason_code": {
+                "$ref": "common-definitions.schema.json#/$defs/protocol_code"
+              },
+              "excluded_from_active_inheritance": {"type": "boolean"}
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "criticality": {
+                      "enum": ["supporting", "optional"]
+                    },
+                    "status": {
+                      "enum": ["hash_mismatch", "target_invalid"]
+                    }
+                  },
+                  "required": ["criticality", "status"]
+                },
+                "then": {
+                  "required": ["excluded_from_active_inheritance"],
+                  "properties": {
+                    "excluded_from_active_inheritance": {"const": true}
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "reservations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "artifact_id"],
+            "properties": {
+              "code": {
+                "$ref": "common-definitions.schema.json#/$defs/protocol_code"
+              },
+              "artifact_id": {
+                "$ref": "common-definitions.schema.json#/$defs/artifact_id"
+              }
+            }
+          }
+        },
+        "decision_nonce": {
+          "$ref": "common-definitions.schema.json#/$defs/nonce"
+        },
+        "decided_at": {
+          "$ref": "common-definitions.schema.json#/$defs/timestamp"
+        },
+        "effect": {"enum": ["activating", "non_activating"]},
+        "previous_acceptance_hash": {
+          "$ref": "common-definitions.schema.json#/$defs/sha256"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "subject": {
+                "required": [
+                  "handoff_artifact_id",
+                  "handoff_document_hash"
+                ]
+              }
+            },
+            "required": ["subject"]
+          },
+          "then": {
+            "properties": {
+              "target_results": {
+                "minItems": 2,
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "criticality": {"const": "critical_root"}
+                  },
+                  "required": [
+                    "artifact_id",
+                    "criticality",
+                    "expected_sha256"
+                  ]
+                },
+                "minContains": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "enum": ["accepted", "accepted_with_reservations"]
+              }
+            },
+            "required": ["decision"]
+          },
+          "then": {
+            "properties": {
+              "effect": {"const": "activating"}
+            }
+          },
+          "else": {
+            "properties": {
+              "effect": {"const": "non_activating"}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision_actor": {
+                "properties": {
+                  "decision_mode": {
+                    "const": "imported_historical_claim"
+                  }
+                },
+                "required": ["decision_mode"]
+              }
+            },
+            "required": ["decision_actor"]
+          },
+          "then": {
+            "properties": {
+              "effect": {"const": "non_activating"}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "target_results": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "criticality": {
+                      "enum": ["critical_root", "required_source"]
+                    },
+                    "status": {
+                      "enum": [
+                        "hash_mismatch",
+                        "target_invalid",
+                        "verification_not_attempted",
+                        "target_missing_unanchored"
+                      ]
+                    }
+                  },
+                  "required": ["criticality", "status"]
+                }
+              }
+            },
+            "required": ["target_results"]
+          },
+          "then": {
+            "properties": {
+              "decision": {
+                "enum": [
+                  "declined",
+                  "quarantined_integrity_failure"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "quarantined_integrity_failure"
+              }
+            },
+            "required": ["decision"]
+          },
+          "then": {
+            "properties": {
+              "target_results": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "enum": ["hash_mismatch", "target_invalid"]
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision": {"const": "accepted"}
+            },
+            "required": ["decision"]
+          },
+          "then": {
+            "properties": {
+              "target_results": {
+                "items": {
+                  "properties": {
+                    "status": {"const": "target_present_verified"}
+                  },
+                  "required": ["status"]
+                }
+              },
+              "reservations": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "enum": [
+                  "declined",
+                  "quarantined_integrity_failure"
+                ]
+              }
+            },
+            "required": ["decision"]
+          },
+          "then": {
+            "properties": {
+              "reservations": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision": {"const": "accepted_with_reservations"}
+            },
+            "required": ["decision"]
+          },
+          "then": {
+            "properties": {
+              "target_results": {
+                "items": {
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "target_present_verified",
+                        "ledger_known_target_missing",
+                        "hash_mismatch",
+                        "target_invalid"
+                      ]
+                    }
+                  },
+                  "required": ["status"]
+                },
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "ledger_known_target_missing",
+                        "hash_mismatch",
+                        "target_invalid"
+                      ]
+                    }
+                  },
+                  "required": ["status"]
+                }
+              },
+              "reservations": {"minItems": 1}
+            }
+          }
+        }
+      ]
+    },
+    "responsibility": {
+      "allOf": [
+        {
+          "$ref": "common-definitions.schema.json#/$defs/responsibility"
+        },
+        {
+          "properties": {
+            "event_index": {"type": "integer", "minimum": 1},
+            "previous_head": {
+              "$ref": "common-definitions.schema.json#/$defs/nonzero_sha256"
+            }
+          }
+        }
+      ]
+    },
+    "document_hash": {
+      "$ref": "common-definitions.schema.json#/$defs/document_hash"
+    },
+    "resulting_head": {
+      "$ref": "common-definitions.schema.json#/$defs/sha256"
+    },
+    "proofs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common-definitions.schema.json#/$defs/proof"
+      }
+    }
+  }
+}

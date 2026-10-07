@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.tmp
+*.log
+.evidence/
+evidence/
+.codex/
+*.pdf
+*.zip
+*.gpg
+*.key
+*.pem
+*.p12
+*.pfx
+.env
