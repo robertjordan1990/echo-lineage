@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  verify:
+  stage2a-stdlib:
     runs-on: ubuntu-latest
     env:
       PYTHONDONTWRITEBYTECODE: '1'
@@ -16,12 +16,38 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
+
+      - name: Create isolated stdlib environment
+        run: |
+          python3 -B -m venv --without-pip "$RUNNER_TEMP/echo-stage2a-stdlib"
 
       - name: Verify hash chain in PAIR example
         run: |
-          python3 -B tools/tools/echo_msg_hash.py verify --in Ht_pair.jsonl --recompute
+          "$RUNNER_TEMP/echo-stage2a-stdlib/bin/python" -B tools/tools/echo_msg_hash.py verify --in Ht_pair.jsonl --recompute
 
-      - name: Verify complete release and regression suite
+      - name: Verify unchanged Stage 2A baseline without cryptography
         run: |
-          python3 -B scripts/verify_release.py
+          "$RUNNER_TEMP/echo-stage2a-stdlib/bin/python" -B scripts/verify_release.py --profile stage2a
+
+  stage2b-full:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install tested Stage 2B dependencies in an isolated environment
+        run: |
+          python3 -B -m venv "$RUNNER_TEMP/echo-stage2b-full"
+          "$RUNNER_TEMP/echo-stage2b-full/bin/python" -B -m pip install --disable-pip-version-check -r requirements-2b.txt
+
+      - name: Verify complete release and all Stage 2A and Stage 2B tests
+        run: |
+          "$RUNNER_TEMP/echo-stage2b-full/bin/python" -B scripts/verify_release.py

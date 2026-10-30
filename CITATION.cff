@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "echo-lineage: a read-only verifier for explicit agent lineage and handoff claims"
+title: "echo-lineage: read-only verification and bounded signed local decisions"
 message: "Cite Robert Jordan as the project pseudonym, together with the repository and exact commit used; this is not attribution to a separate person."
 type: software
 authors:
@@ -13,8 +13,10 @@ keywords:
   - explicit acceptance
   - reproducibility
 abstract: >-
-  A transport-neutral, read-only verifier that separates consistency checks
-  for lineage and handoff evidence from attributed acceptance and activation.
+  A transport-neutral protocol with a read-only verifier that separates
+  consistency checks for lineage and handoff evidence from acceptance and
+  activation. A separate bounded local Stage 2B candidate records scoped
+  operator decisions using pinned Ed25519 keys and never activates a runtime.
   Maintained under the project pseudonym Robert Jordan and developed through
   documented human–AI collaboration within fAIR DecentrAIzation. The pseudonym
   does not identify a separate person or assign copyright ownership. This
