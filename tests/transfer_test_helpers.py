@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from lineage_test_helpers import eid, root_document, source
 from tools.tools.echo_canonical import sha256_hex, canon_json_bytes
-from tools.tools.echo_lineage import VerificationBindings
+from tools.tools.echo_lineage import VerificationBindings, finalize_document
 from tools.tools.echo_lineage_auth import sign_acceptance_document, policy_digest as old_policy_digest
 from tools.tools.echo_state_model import create_state, prepare_decision, apply_decision
 from tools.tools.echo_state_store import snapshot_digest
@@ -30,8 +30,12 @@ INSTANCE = '00000000-0000-4000-8000-000000000501'
 
 class TransferFixture:
     def __init__(self, directory, *, payload=b'Synthetic context.\n$(touch /never-execute)\n',
-                 missing=False, excluded=False, canonical=False, descriptor_bytes=0, large_policy=False, code_digest='c' * 64):
+                 missing=False, excluded=False, canonical=False, descriptor_bytes=0, large_policy=False,
+                 source_chain_id=None, root_artifact_id=None, payload_artifact_id=None, ledger_artifact_id=None, code_digest='c' * 64):
         self.directory = Path(directory)
+        payload_id = PAYLOAD_ID if payload_artifact_id is None else payload_artifact_id
+        ledger_id = eid('artifact', 520) if ledger_artifact_id is None else ledger_artifact_id
+        root_artifact_id = eid('artifact', 100) if root_artifact_id is None else root_artifact_id
         self.keys, self.public = {}, {}
         for role, seed in [('source', 81), ('recipient', 82), ('consumer', 83)]:
             key = Ed25519PrivateKey.from_private_bytes(bytes([seed]) * 32)
@@ -59,14 +63,20 @@ class TransferFixture:
             src['artifact']['hash_scope'] = 'canonical_document'
         if excluded:
             target.write_bytes(b'changed optional artifact')
+        src['artifact']['artifact_id'] = payload_id
+        if missing:
+            src['artifact']['ledger_ref']['ledger_artifact_id'] = ledger_id
         root = root_document(sources=[src])
-        legacy = create_state(root, old_policy, eid('artifact', 100), store_id=SOURCE_STORE)
-        bindings = VerificationBindings(target_paths={PAYLOAD_ID: target}, target_roots={PAYLOAD_ID: self.directory})
+        if source_chain_id is not None:
+            root['responsibility']['chain_id'] = source_chain_id
+            root = finalize_document(root)
+        legacy = create_state(root, old_policy, root_artifact_id, store_id=SOURCE_STORE)
+        bindings = VerificationBindings(target_paths={payload_id: target}, target_roots={payload_id: self.directory})
         if missing:
             target.unlink()
-            bindings.ledger_paths[eid('artifact', 520)] = ledger
-            bindings.ledger_roots[PAYLOAD_ID] = self.directory
-            bindings.ledger_entries[PAYLOAD_ID] = 'context.txt'
+            bindings.ledger_paths[ledger_id] = ledger
+            bindings.ledger_roots[payload_id] = self.directory
+            bindings.ledger_entries[payload_id] = 'context.txt'
         bundle = prepare_decision(legacy, decision='accepted_with_reservations' if missing or excluded else 'accepted',
             actor_id=SOURCE_ACTOR, operator_id=SOURCE_ACTOR, request_id='legacy-accept', verification_time=T,
             bindings=bindings, expected_state_digest=snapshot_digest(legacy))
@@ -111,11 +121,11 @@ class TransferFixture:
                     'key_id': eid('key', number + 2000), 'public_key': public,
                     'decision_actor_id': RECIPIENT_ACTOR, 'installation_id': eid('installation', 2),
                     'decision_mode': 'human_operator', 'purpose': 'lineage_acceptance'})
-        self.artifacts = [{'artifact_id': PAYLOAD_ID, 'status': 'missing',
+        self.artifacts = [{'artifact_id': payload_id, 'status': 'missing',
             'ledger_b64': base64.b64encode(ledger_data).decode(), 'ledger_entry': 'context.txt'}] if missing else [
-            {'artifact_id': PAYLOAD_ID, 'status': 'present', 'data_b64': base64.b64encode(payload).decode()}]
+            {'artifact_id': payload_id, 'status': 'present', 'data_b64': base64.b64encode(payload).decode()}]
         if excluded:
-            self.artifacts = [{'artifact_id': PAYLOAD_ID, 'status': 'excluded'}]
+            self.artifacts = [{'artifact_id': payload_id, 'status': 'excluded'}]
         self.counter = 0
 
     def migrate(self):

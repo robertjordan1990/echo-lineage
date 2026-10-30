@@ -141,6 +141,13 @@ i wyszukiwanie są dosłowne i ograniczone; nic nie wykonuje tekstu dokumentu.
 Operacje `activation_start` i `activation_loaded` należą do przypiętego adaptera
 konsumenta i nie zastępują zgody operatora.
 
+Nowy grant wymaga miejsca na cały obieg: zgodę, zamiar startu, potwierdzenie
+załadowania i odwołanie. Program rezerwuje odpowiednio 4, 3 i 2 wolne wpisy
+przy kolejnych etapach, więc odwołanie zachowuje swój ostatni wpis. Błąd
+`PROFILE_REVOCATION_CAPACITY` oznacza odmowę nowej aktywacji bez zmiany stanu.
+Kolizja wygenerowanych identyfikatorów jest sprawdzana jeszcze przed migracją;
+można wtedy przygotować inną politykę z nowym ID transferu.
+
 ## Sprawdzenie i odzyskiwanie
 
 ```sh

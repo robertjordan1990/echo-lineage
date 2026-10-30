@@ -104,6 +104,13 @@ responsibility slot and permanently seals this profile's epoch. A refusal or
 expiry does not make that slot reusable. The same immutable transfer can be
 exported again; an alternative transfer requires a later protocol profile.
 
+Before migration or issuance, the profile also checks the deterministic
+recipient chain and reserved metadata artifact IDs. The recipient chain must
+differ from the source chain; the source-acceptance, recipient-root, and handoff
+artifact IDs must not alias source root, inherited artifact, or ledger IDs.
+A collision is refused before source ownership or sealing, allowing a different
+transfer ID to be provisioned while the existing source remains unchanged.
+
 The envelope binds the complete pre-issuance source proof, signed issuance and
 export authority, actual captured bytes, independent policy digest, both
 installations, nonces, state heads, and explicit times. It does not include its
@@ -139,6 +146,12 @@ ID, capabilities, nonce, and a fresh probe. A durable consumer launch intent
 precedes process creation. A fixed installed module is launched directly,
 without a shell or any packet-derived executable. Private anchored Unix IPC
 and a stable instance lock prevent a duplicate live consumer.
+
+Journal capacity is reserved for the entire activation and revocation path:
+four slots before a grant, three before launch intent, and two before a loaded
+receipt. The last remaining slot can therefore record deactivation. A new grant
+that would exhaust this reserve is refused without changing state; exact
+idempotent replay still works after the journal reaches its limit.
 
 After loading, the consumer answers a probe from its in-memory context and
 signs an observation bound to the grant, actual loaded hashes, instance, and

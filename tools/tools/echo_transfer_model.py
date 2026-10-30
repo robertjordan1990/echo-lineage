@@ -285,8 +285,25 @@ def _capture(legacy, artifacts):
     return facts
 
 
+def _profile_identifiers(legacy, policy):
+    """Known continuation namespaces must be feasible before epoch ownership."""
+    transfer = policy["transfer_id"]
+    _require(legacy["root"]["responsibility"]["chain_id"] !=
+        _typed("responsibility-chain", transfer, "recipient-chain"), "PROFILE_IDENTIFIER_COLLISION")
+    source_ids = {legacy["root_artifact_id"]}
+    for source in legacy["root"]["body"]["inheritance_sources"]:
+        ref = source["artifact"]
+        source_ids.add(ref["artifact_id"])
+        if "ledger_ref" in ref:
+            source_ids.add(ref["ledger_ref"]["ledger_artifact_id"])
+    metadata_ids = {_typed("artifact", transfer, label) for label in
+        ("source-acceptance", "recipient-root", "handoff")}
+    _require(len(metadata_ids) == 3 and not source_ids.intersection(metadata_ids), "PROFILE_IDENTIFIER_COLLISION")
+
+
 def _migration_report(legacy, policy, artifacts):
     latest = _legacy(legacy, policy)
+    _profile_identifiers(legacy, policy)
     facts = _capture(legacy, artifacts)
     # Capacity belongs to the complete lifecycle, before source ownership or
     # issuance. The source prefix holds L + A + 2P: preserved legacy, captured
@@ -681,6 +698,8 @@ def _derive(state, body, *, signed=False):
             import_digest=auth.digest("import", {"acceptance_hash": decision["acceptance_hash"],
                 "artifact_ids": inp["artifact_ids"], "artifacts": data}))
     elif op == "activate":
+        # Reserve the entire grant/start/loaded/revoke tail before consent.
+        _require(len(state["records"]) + 4 <= MAX_RECORDS, "PROFILE_REVOCATION_CAPACITY")
         _require(p["import"] is not None and not p["integrity_blocked"], "CONTEXT_NOT_IMPORTED")
         _uuid(inp["activation_id"])
         _require(inp["activation_id"] not in p["activations"], "ACTIVATION_ID_REUSED")
@@ -702,6 +721,7 @@ def _derive(state, body, *, signed=False):
         facts.update(import_digest=p["import"]["import_digest"], acceptance_hash=p["decision"]["acceptance_hash"],
             consumer=state["policy"]["consumer"], artifact_ids=inp["artifact_ids"], probe=probe)
     elif op == "activation_start":
+        _require(len(state["records"]) + 3 <= MAX_RECORDS, "PROFILE_REVOCATION_CAPACITY")
         view = _grant_view(state, inp["activation_id"])
         _require(view["launch"] is None, "ACTIVATION_LAUNCH_ALREADY_ATTEMPTED")
         _uuid(inp["instance_id"])
@@ -709,6 +729,7 @@ def _derive(state, body, *, signed=False):
         _require(inp["code_digest"] == view["consumer"]["code_digest"], "CONSUMER_CODE_PIN_MISMATCH")
         facts.update(grant_digest=view["grant_digest"], import_digest=view["import_digest"], durable_launch_intent=True)
     elif op == "activation_loaded":
+        _require(len(state["records"]) + 2 <= MAX_RECORDS, "PROFILE_REVOCATION_CAPACITY")
         view = _grant_view(state, inp["activation_id"])
         _require(view["status"] == "launch_intent", "CONSUMER_LOAD_ALREADY_RECORDED")
         facts["loaded"] = _loaded_receipt(state, inp)

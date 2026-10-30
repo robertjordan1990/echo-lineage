@@ -474,6 +474,103 @@ class TransferModelTests(unittest.TestCase):
             with self.assertRaisesRegex(model.TransferError, '^AUTHENTICATION_UNAVAILABLE$'):
                 self.migration_candidate()
 
+    def test_generated_profile_identifiers_refuse_before_epoch_ownership(self):
+        from tools.tools.echo_state_model import inspect_state as inspect_legacy
+        reserved = {label: model._typed('artifact', self.f.policy['transfer_id'], label)
+            for label in ('source-acceptance', 'recipient-root', 'handoff')}
+        cases = [('recipient-chain', {'source_chain_id': model._typed('responsibility-chain',
+            self.f.policy['transfer_id'], 'recipient-chain')})]
+        for label, identifier in reserved.items():
+            cases.extend([(label + ':root', {'root_artifact_id': identifier}),
+                (label + ':inheritance', {'payload_artifact_id': identifier}),
+                (label + ':ledger', {'missing': True, 'ledger_artifact_id': identifier})])
+        for label, params in cases:
+            with self.subTest(collision=label), tempfile.TemporaryDirectory() as directory:
+                f = TransferFixture(directory, **params)
+                self.assertTrue(inspect_legacy(f.legacy)['local_acceptance_active'])
+                before = copy.deepcopy(f.legacy)
+                with self.assertRaisesRegex(model.TransferError, '^PROFILE_IDENTIFIER_COLLISION$'):
+                    f.migrate()
+                self.assertEqual(f.legacy, before)
+                self.assertEqual(f.legacy['schema'], 'echo-lineage-state/v1')
+        # Ordinary identifiers still traverse the complete profile elsewhere;
+        # explicitly establish the source migration remains unsealed here.
+        self.assertFalse(self.f.migrate()['projections']['sealed'])
+
+    def test_reserved_tail_keeps_loaded_generation63_revocable_at_generation64(self):
+        state = copy.deepcopy(self.imported)
+        policy = state['policy']
+        activation = lambda number: '00000000-0000-4000-8000-' + str(number).zfill(12)
+        grant_inputs = lambda number, nonce: {'activation_id': activation(number), 'artifact_ids': [PAYLOAD_ID],
+            'probe': {'artifact_id': PAYLOAD_ID, 'offset': 0, 'length': 9, 'nonce': nonce}}
+
+        def append_signed_history(operation, inputs):
+            # Generate a bounded historical fixture without quadratically
+            # replaying its growing prefix on each setup step. Every record is
+            # signed, and the complete resulting history is replayed below;
+            # the boundary operations use the public prepare/sign/apply APIs.
+            consumer = operation in {'activation_start', 'activation_loaded'}
+            actor = CONSUMER if consumer else RECIPIENT_ACTOR
+            role = 'local_context_consumer' if consumer else 'human_operator'
+            body = model._body(state, operation, inputs, actor,
+                'history:' + str(state['generation'] + 1), LATER)
+            report, document = model._derive(state, body)
+            self.assertIsNone(document)
+            body.update(report=report, document=document)
+            packet = auth.sign_packet(body, policy, self.f.keys['consumer' if consumer else 'recipient'],
+                purpose=model.PURPOSES[operation], actor_id=actor,
+                installation_id=policy['recipient']['installation_id'], role=role)
+            record = {'generation': state['generation'] + 1, 'previous_journal_head': state['journal_head'],
+                'packet': packet, 'applied_at': LATER}
+            record['event_hash'] = model._record_hash(record)
+            model._append(state, record)
+
+        for number in range(27):
+            inputs = grant_inputs(8100 + number, format(number + 1, '064x'))
+            append_signed_history('activate', inputs)
+            append_signed_history('deactivate', {'activation_id': inputs['activation_id']})
+        early = grant_inputs(8199, 'f'*64)
+        append_signed_history('activate', early)
+        append_signed_history('activation_start', {'activation_id': early['activation_id'],
+            'instance_id': activation(8500), 'launch_nonce': 'e'*64, 'code_digest': policy['consumer']['code_digest']})
+        append_signed_history('deactivate', {'activation_id': early['activation_id']})
+        self.assertEqual(state['generation'], 60)
+        self.assertTrue(model.inspect_state(state)['local_chain_valid'])
+
+        final = grant_inputs(8200, 'a'*64)
+        authorized = self.f.action(state, 'activate', final)
+        started = self.f.action(authorized, 'activation_start', {'activation_id': final['activation_id'],
+            'instance_id': INSTANCE, 'launch_nonce': 'b'*64, 'code_digest': policy['consumer']['code_digest']})
+        self.assertEqual(started['generation'], 62)
+        view = model.consumer_view(started, final['activation_id'])
+        payload = {'kind': 'loaded', 'activation_id': final['activation_id'], 'instance_id': INSTANCE,
+            'launch_nonce': 'b'*64, 'grant_digest': view['grant_digest'], 'import_digest': view['import_digest'],
+            'read_set': view['read_set'], 'store_id': view['store_id'], 'installation_id': view['installation_id'],
+            'consumer_id': CONSUMER, 'code_digest': policy['consumer']['code_digest'], 'probe': view['probe'],
+            'probe_result': 'Synthetic', 'probe_result_sha256': sha256_hex(b'Synthetic'), 'observed_at': LATER}
+        receipt = auth.sign_packet(payload, policy, self.f.keys['consumer'], purpose='context_consumption_receipt',
+            actor_id=CONSUMER, installation_id=view['installation_id'], role='local_context_consumer')
+        loaded = self.f.action(started, 'activation_loaded', {'activation_id': final['activation_id'],
+            'instance_id': INSTANCE, 'receipt': receipt})
+        self.assertEqual(loaded['generation'], 63)
+        self.assertEqual(model.consumer_view(loaded, final['activation_id'])['status'], 'loaded')
+        revoked, packet = self.f.action(loaded, 'deactivate', {'activation_id': final['activation_id']}, return_packet=True)
+        self.assertEqual(revoked['generation'], 64)
+        with self.assertRaisesRegex(model.TransferError, 'ACTIVATION_REVOKED'):
+            model.consumer_view(revoked, final['activation_id'])
+        replay, result = self.apply(revoked, packet, expected_state_digest='0'*64)
+        self.assertTrue(result['idempotent'])
+        self.assertEqual(replay, revoked)
+
+        # A start followed by early revoke reaches an inactive generation63.
+        # The last slot cannot be spent on a grant lacking a complete tail.
+        inactive = self.f.action(started, 'deactivate', {'activation_id': final['activation_id']})
+        before = copy.deepcopy(inactive)
+        with self.assertRaisesRegex(model.TransferError, '^PROFILE_REVOCATION_CAPACITY$'):
+            self.prepare(inactive, 'activate', grant_inputs(8201, 'c'*64))
+        self.assertEqual(inactive, before)
+        self.assertEqual(inactive['generation'], 63)
+
     def test_closed_operation_inputs_reject_unknown_or_missing_fields(self):
         for inputs in ({'decision': 'accepted', 'authenticated': True}, {}, {'decision': 'invented'}):
             with self.subTest(inputs=inputs), self.assertRaises(model.TransferError):
