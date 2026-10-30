@@ -10,9 +10,11 @@ import copy
 import json
 import os
 from pathlib import Path
+import selectors
 import stat
 import subprocess
 import tempfile
+import time
 import unittest
 
 from cryptography.hazmat.primitives import serialization
@@ -251,6 +253,79 @@ class StateCLITests(unittest.TestCase):
         self.assertEqual((self.state_dir / "state.json").read_bytes(), original)
         self.prepare(request="request-3", digest=stale, expected=2)
         self.assertFalse((self.base / "request-3-candidate.json").exists())
+
+    def test_two_concurrent_applies_commit_exactly_one_event_and_winner_retry(self):
+        self.initialize()
+        initial_digest = self.digest()
+        requests = ("concurrent-request-1", "concurrent-request-2")
+        signed = [self.sign(self.prepare(request=request, digest=initial_digest))
+            for request in requests]
+        script = """
+import sys
+from tools.tools.echo_state import main
+print('READY', flush=True)
+if sys.stdin.readline().strip() != 'GO':
+    sys.exit(99)
+sys.exit(main(sys.argv[1:]))
+"""
+        processes = []
+        results = []
+        try:
+            with selectors.DefaultSelector() as readiness:
+                for request, bundle in zip(requests, signed):
+                    process = subprocess.Popen([sys.executable, "-B", "-c", script,
+                        "decision", "apply", "--state-dir", str(self.state_dir),
+                        "--decision", str(bundle), "--request-id", request,
+                        "--expected-state-digest", initial_digest], cwd=REPO,
+                        stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE, text=True)
+                    processes.append(process)
+                    readiness.register(process.stdout, selectors.EVENT_READ)
+                deadline = time.monotonic() + 20
+                while readiness.get_map():
+                    events = readiness.select(max(0, deadline - time.monotonic()))
+                    self.assertTrue(events, "concurrent apply readiness timed out")
+                    for key, _ in events:
+                        self.assertEqual(key.fileobj.readline().strip(), "READY")
+                        readiness.unregister(key.fileobj)
+            # Both fully imported clients are waiting before either apply starts.
+            for process in processes:
+                process.stdin.write("GO\n")
+                process.stdin.flush()
+            for process in processes:
+                stdout, stderr = process.communicate(timeout=20)
+                self.assertEqual(stderr, "")
+                self.assertNotIn(self.pem.decode().strip(), stdout)
+                results.append((process.returncode, json.loads(stdout)))
+        finally:
+            for process in processes:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5)
+                for stream in (process.stdin, process.stdout, process.stderr):
+                    if stream is not None:
+                        stream.close()
+        self.assertEqual(sorted(code for code, _ in results), [0, 2])
+        winner = next(index for index, (code, _) in enumerate(results) if code == 0)
+        loser = 1 - winner
+        self.assertEqual(results[winner][1]["status"], "committed")
+        self.assertEqual(results[loser][1]["status"], "refused")
+        # The CLI deliberately redacts the busy flock exception's raw message.
+        self.assertIn(results[loser][1]["error"], {"STALE_STATE", "INVALID_OR_UNSAFE_INPUT"})
+        state = self.state()
+        self.assertEqual(state["generation"], 1)
+        self.assertEqual(len(state["records"]), 1)
+        self.assertEqual(state["records"][0]["request_id"], requests[winner])
+        self.assertEqual(set(state["requests"]), {requests[winner]})
+        self.assertNotIn(requests[loser], state["requests"])
+        verified = self.cli("state", "verify", "--state-dir", self.state_dir, "--json")
+        self.assertTrue(verified["local_chain_valid"])
+        original = (self.state_dir / "state.json").read_bytes()
+        retry = self.apply(signed[winner], request=requests[winner], digest=initial_digest)
+        self.assertEqual(retry["status"], "already_recorded")
+        self.assertTrue(retry["idempotent"])
+        self.assertEqual(retry["generation"], 1)
+        self.assertEqual((self.state_dir / "state.json").read_bytes(), original)
 
     def test_apply_request_argument_must_match_signed_bundle(self):
         self.initialize()

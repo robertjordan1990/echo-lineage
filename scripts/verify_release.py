@@ -26,7 +26,7 @@ import sys
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = "SHA256SUMS"
-EXPECTED_TESTS = 306
+EXPECTED_TESTS = 307
 STAGE2A_EXPECTED_TESTS = 151
 # Frozen test modules from the published Stage 2A release a1fc9c5.  Select them
 # explicitly so the stdlib-only profile never imports or silently skips 2B tests.
