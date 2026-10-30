@@ -26,14 +26,19 @@ import sys
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = "SHA256SUMS"
-EXPECTED_TESTS = 307
+EXPECTED_TESTS = 425
 STAGE2A_EXPECTED_TESTS = 151
+STAGE2B_EXPECTED_TESTS = 307
 # Frozen test modules from the published Stage 2A release a1fc9c5.  Select them
 # explicitly so the stdlib-only profile never imports or silently skips 2B tests.
 STAGE2A_TEST_MODULES = (
     "test_echo_canonical", "test_echohash_recompute", "test_handoff_verify",
     "test_ledger_hardening", "test_lineage_decision_policy", "test_lineage_documents",
     "test_lineage_heads", "test_lineage_identity", "test_lineage_verify", "test_stack_privacy",
+)
+STAGE2B_TEST_MODULES = STAGE2A_TEST_MODULES + (
+    "test_lineage_auth", "test_state_cli", "test_state_commit_outcome",
+    "test_state_model", "test_state_store",
 )
 HEX64 = re.compile(r"[0-9a-f]{64}")
 
@@ -138,12 +143,14 @@ def check_manifest(actual: dict[str, str]) -> None:
 
 def run_checks(profile: str = "full") -> None:
     python = [sys.executable, "-B"]
-    expected_tests = STAGE2A_EXPECTED_TESTS if profile == "stage2a" else EXPECTED_TESTS
+    expected_tests = {"stage2a": STAGE2A_EXPECTED_TESTS,
+        "stage2b": STAGE2B_EXPECTED_TESTS, "full": EXPECTED_TESTS}[profile]
     if profile == "stage2a" and importlib.util.find_spec("cryptography") is not None:
         raise GateError("stage2a profile requires an environment without cryptography")
     unit_tests = python + ["-m", "unittest"]
-    if profile == "stage2a":
-        unit_tests += [*STAGE2A_TEST_MODULES, "-v"]
+    if profile in {"stage2a", "stage2b"}:
+        modules = STAGE2A_TEST_MODULES if profile == "stage2a" else STAGE2B_TEST_MODULES
+        unit_tests += [*modules, "-v"]
     else:
         unit_tests += ["discover", "-s", "tests", "-v"]
     lineage = python + ["tools/tools/echo_lineage.py", "lineage", "verify"]
@@ -159,12 +166,13 @@ def run_checks(profile: str = "full") -> None:
         ("mutated root", lineage + ["--document", "examples/MUTATED_ROOT.json", "--json"], 2),
     ]
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-    if profile == "stage2a":
+    if profile in {"stage2a", "stage2b"}:
         environment["PYTHONPATH"] = os.pathsep.join(
             item for item in (str(ROOT / "tests"), environment.get("PYTHONPATH", "")) if item
         )
     for label, command, expected_exit in checks:
-        process = subprocess.run(command, cwd=ROOT, env=environment, text=True, capture_output=True, timeout=180, check=False)
+        timeout = 600 if label == "unit tests" and profile == "full" else 180
+        process = subprocess.run(command, cwd=ROOT, env=environment, text=True, capture_output=True, timeout=timeout, check=False)
         if process.returncode != expected_exit:
             details = (process.stdout + process.stderr)[-6000:].strip()
             raise GateError(f"{label}: expected exit {expected_exit}, got {process.returncode}\n{details}")
@@ -174,15 +182,15 @@ def run_checks(profile: str = "full") -> None:
             if count is None or int(count.group(1)) != expected_tests:
                 raise GateError(f"unit test count must equal {expected_tests}; got {count.group(1) if count else 'unknown'}")
             skipped = re.search(r"\bskipped=([1-9][0-9]*)\b", process.stderr)
-            if profile == "full" and skipped:
-                raise GateError("full profile must run every test without skips")
+            if profile != "stage2a" and skipped:
+                raise GateError("cryptography profiles must run every test without skips")
             suffix = f"{expected_tests}/{expected_tests}; profile {profile}"
         print(f"PASS {label} ({suffix})", flush=True)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=("full", "stage2a"), default="full")
+    parser.add_argument("--profile", choices=("full", "stage2a", "stage2b"), default="full")
     arguments = parser.parse_args()
     try:
         before = snapshot()
