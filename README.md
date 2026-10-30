@@ -1,6 +1,8 @@
 # echo-lineage/v1 — public release candidate
 
-Status: **Stage 2A / read-only verifier / public-safe candidate**
+Status: **Stage 2A read-only verifier + Stage 2B Core implementation candidate**.
+The new bounded local profile is pending independent patch review and human
+key/privilege review; this branch is not a release or an adopted installation.
 
 Maintained under the project pseudonym **Robert Jordan**.
 Developed through documented human–AI collaboration within **fAIR DecentrAIzation**.
@@ -9,14 +11,18 @@ See [NOTICE.md](NOTICE.md) for attribution and scope.
 
 ## Run it
 
-Use Python 3.10 or newer. The verifier and tests use the Python standard
-library; the public-pack check also requires Bash, `sha256sum`, and `awk`.
+Use Python 3.10 or newer on a local POSIX filesystem. Stage 2A uses the Python
+standard library. Stage 2B additionally requires the tested dependencies in
+`requirements-2b.txt`; the public-pack check requires Bash, `sha256sum`, and `awk`.
 No API key or network connection is required to run the local verifier.
 
-From a fresh checkout, run the complete release checks:
+For all Stage 2A and 2B checks, install dependencies in an isolated environment
+outside the checkout and run:
 
 ```sh
-python3 -B scripts/verify_release.py
+python3 -B -m venv /path/to/private/venv
+/path/to/private/venv/bin/python -B -m pip install -r requirements-2b.txt
+/path/to/private/venv/bin/python -B scripts/verify_release.py
 ```
 
 The checks cover the full file manifest, regression suite, public-pack hashes,
@@ -26,6 +32,16 @@ For the three individual commands, see [examples/README.md](examples/README.md).
 A verified independent root can return 0. A continuation requiring an
 acceptance whose attribution is not authenticated remains incomplete (10)
 in Stage 2A, even when its document relationships are consistent.
+
+The exact 151-test Stage 2A baseline has a separate CI job and can run in an
+isolated environment without cryptography using
+`python3 -B scripts/verify_release.py --profile stage2a`.
+
+Stage 2B uses a separate [local state CLI](tools/spec/echo-lineage-state-v1/README.md).
+It records four explicitly signed operator decisions about one existing,
+independent root. It authenticates the scoped pinned key holder, not biological
+identity, physical consent, a model session, or authorship of the unsigned root.
+`runtime_activation` is always false. [Polish command guide](tools/STATE_COMMANDS.pl.md).
 
 ## What this is
 
@@ -88,7 +104,10 @@ Forks and merges are never inferred from similarity or transport.
 - authority to act;
 - cryptographic authenticity of an acceptance actor.
 
-Those belong to later stages. A structurally valid acceptance with unauthenticated attribution remains incomplete; it does not become stronger because a proof-shaped object exists.
+The separate 2B Core CLI adds scoped Ed25519 decision signatures and local
+durable state only within its declared profile. It does not change Stage 2A's
+verification behavior: a structurally valid acceptance with unauthenticated
+attribution still remains incomplete in the Stage 2A verifier.
 
 ## Public demo goal
 

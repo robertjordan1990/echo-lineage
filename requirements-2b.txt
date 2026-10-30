@@ -1,0 +1,5 @@
+# Optional Stage 2B cryptography capability; Stage 2A remains stdlib-only.
+# Tested together on CPython 3.11 / Linux. Full CI must execute every 2B test.
+cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.12

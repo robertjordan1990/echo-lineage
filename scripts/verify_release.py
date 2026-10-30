@@ -3,6 +3,9 @@
 
 Run from any working directory with Python 3.10 or newer:
     python3 -B scripts/verify_release.py
+The full profile requires the pinned optional Stage 2B dependencies.  To check
+the unchanged 151-test Stage 2A baseline in an environment without cryptography:
+    python3 -B scripts/verify_release.py --profile stage2a
 
 SHA256SUMS covers every regular release file except itself and root .git
 metadata. Missing, extra, special and symbolic-link files are rejected.
@@ -10,7 +13,9 @@ The existing public-pack check also needs Bash and standard Unix utilities.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
+import importlib.util
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -21,7 +26,15 @@ import sys
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = "SHA256SUMS"
-EXPECTED_TESTS = 151
+EXPECTED_TESTS = 306
+STAGE2A_EXPECTED_TESTS = 151
+# Frozen test modules from the published Stage 2A release a1fc9c5.  Select them
+# explicitly so the stdlib-only profile never imports or silently skips 2B tests.
+STAGE2A_TEST_MODULES = (
+    "test_echo_canonical", "test_echohash_recompute", "test_handoff_verify",
+    "test_ledger_hardening", "test_lineage_decision_policy", "test_lineage_documents",
+    "test_lineage_heads", "test_lineage_identity", "test_lineage_verify", "test_stack_privacy",
+)
 HEX64 = re.compile(r"[0-9a-f]{64}")
 
 
@@ -123,12 +136,20 @@ def check_manifest(actual: dict[str, str]) -> None:
     print(f"PASS release manifest ({len(expected)} files)", flush=True)
 
 
-def run_checks() -> None:
+def run_checks(profile: str = "full") -> None:
     python = [sys.executable, "-B"]
+    expected_tests = STAGE2A_EXPECTED_TESTS if profile == "stage2a" else EXPECTED_TESTS
+    if profile == "stage2a" and importlib.util.find_spec("cryptography") is not None:
+        raise GateError("stage2a profile requires an environment without cryptography")
+    unit_tests = python + ["-m", "unittest"]
+    if profile == "stage2a":
+        unit_tests += [*STAGE2A_TEST_MODULES, "-v"]
+    else:
+        unit_tests += ["discover", "-s", "tests", "-v"]
     lineage = python + ["tools/tools/echo_lineage.py", "lineage", "verify"]
     fixture = "tools/examples/echo-lineage-v1/"
     checks = [
-        ("unit tests", python + ["-m", "unittest", "discover", "-s", "tests", "-v"], 0),
+        ("unit tests", unit_tests, 0),
         ("public-pack manifest", ["bash", "scripts/verify_public_pack.sh"], 0),
         ("H_t seed", python + ["tools/tools/echo_ht_validate.py", "tools/examples/ECHO_Ht__seed__2026-01-31.jsonl", "--lmax", "5"], 0),
         ("H_t pair", python + ["tools/tools/echo_ht_validate.py", "Ht_pair.jsonl", "--lmax", "5", "--profile", "autolog"], 0),
@@ -138,6 +159,10 @@ def run_checks() -> None:
         ("mutated root", lineage + ["--document", "examples/MUTATED_ROOT.json", "--json"], 2),
     ]
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+    if profile == "stage2a":
+        environment["PYTHONPATH"] = os.pathsep.join(
+            item for item in (str(ROOT / "tests"), environment.get("PYTHONPATH", "")) if item
+        )
     for label, command, expected_exit in checks:
         process = subprocess.run(command, cwd=ROOT, env=environment, text=True, capture_output=True, timeout=180, check=False)
         if process.returncode != expected_exit:
@@ -146,18 +171,24 @@ def run_checks() -> None:
         suffix = f"exit {expected_exit}"
         if label == "unit tests":
             count = re.search(r"^Ran (\d+) tests? in ", process.stderr, re.MULTILINE)
-            if count is None or int(count.group(1)) != EXPECTED_TESTS:
-                raise GateError(f"unit test count must equal {EXPECTED_TESTS}; got {count.group(1) if count else 'unknown'}")
-            suffix = f"{EXPECTED_TESTS}/{EXPECTED_TESTS}"
+            if count is None or int(count.group(1)) != expected_tests:
+                raise GateError(f"unit test count must equal {expected_tests}; got {count.group(1) if count else 'unknown'}")
+            skipped = re.search(r"\bskipped=([1-9][0-9]*)\b", process.stderr)
+            if profile == "full" and skipped:
+                raise GateError("full profile must run every test without skips")
+            suffix = f"{expected_tests}/{expected_tests}; profile {profile}"
         print(f"PASS {label} ({suffix})", flush=True)
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--profile", choices=("full", "stage2a"), default="full")
+    arguments = parser.parse_args()
     try:
         before = snapshot()
         check_manifest(before)
         try:
-            run_checks()
+            run_checks(arguments.profile)
         finally:
             after = snapshot()
             if before != after:

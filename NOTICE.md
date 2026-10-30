@@ -10,13 +10,15 @@ The pseudonym does not create or receive copyright ownership. Copyright in
 copyrightable contributions remains with their respective human contributors.
 This attribution does not assign those rights to the pseudonym or an AI system.
 
-The snapshot includes earlier project components together with the Stage 2A
-verifier. It makes no priority claim. A fresh publication history and its
+The snapshot includes earlier project components, the Stage 2A read-only
+verifier and a bounded Stage 2B Core implementation candidate. It makes no priority claim. A fresh publication history and its
 publication date do not establish when the underlying work was first created
 or independently invented.
 
-The included runtime and tests use Python's standard library. No third-party
-Python packages are vendored. The optional GitHub Actions workflow invokes
+Stage 2A runtime and tests use Python's standard library. Stage 2B uses
+cryptography (Apache-2.0 OR BSD-3-Clause), with cffi (MIT) and pycparser (BSD-3-Clause)
+in the tested environment; their own package notices and backend obligations
+continue to apply. No third-party Python packages are vendored. The GitHub Actions workflow invokes
 `actions/checkout` and `actions/setup-python`, which are separate dependencies.
 
 All distributed identity, acceptance, handoff, and ledger examples are
