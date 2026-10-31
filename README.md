@@ -1,8 +1,9 @@
 # echo-lineage/v1 — public release candidate
 
-Status: **Stage 2A read-only verifier + Stage 2B Core implementation candidate**.
-The new bounded local profile is pending independent patch review and human
-key/privilege review; this branch is not a release or an adopted installation.
+Status: **Stage 2A read-only verifier + Stage 2B Core + Stage 2C implementation candidate**.
+The new bounded Stage 2C profile is a test candidate, pending independent
+patch review and human key/privilege review. This branch is not a Stage 2C
+release or an adopted installation.
 
 Maintained under the project pseudonym **Robert Jordan**.
 Developed through documented human–AI collaboration within **fAIR DecentrAIzation**.
@@ -16,7 +17,7 @@ standard library. Stage 2B additionally requires the tested dependencies in
 `requirements-2b.txt`; the public-pack check requires Bash, `sha256sum`, and `awk`.
 No API key or network connection is required to run the local verifier.
 
-For all Stage 2A and 2B checks, install dependencies in an isolated environment
+For all Stage 2A, 2B and 2C checks, install dependencies in an isolated environment
 outside the checkout and run:
 
 ```sh
@@ -36,12 +37,22 @@ in Stage 2A, even when its document relationships are consistent.
 The exact 151-test Stage 2A baseline has a separate CI job and can run in an
 isolated environment without cryptography using
 `python3 -B scripts/verify_release.py --profile stage2a`.
+The exact previous 307-test Stage 2B baseline remains separately selectable
+with `--profile stage2b`. The default full profile also runs the new Stage 2C
+tests, including actual private local consumer processes and recovery cases.
 
 Stage 2B uses a separate [local state CLI](tools/spec/echo-lineage-state-v1/README.md).
 It records four explicitly signed operator decisions about one existing,
 independent root. It authenticates the scoped pinned key holder, not biological
 identity, physical consent, a model session, or authorship of the unsigned root.
 `runtime_activation` is always false. [Polish command guide](tools/STATE_COMMANDS.pl.md).
+
+The separate [Stage 2C transfer CLI](tools/spec/echo-lineage-transfer-v1/README.md)
+implements one explicitly bound source-to-new-recipient handoff, return
+receipts, decisions, verified byte import, and separately authorized use by a
+fixed local UTF-8 context consumer. The consumer loads context into memory and
+provides bounded read/search with signed observations. It does not integrate
+with or authenticate a cloud model. [Polish command guide](tools/TRANSFER_COMMANDS.pl.md).
 
 ## What this is
 
