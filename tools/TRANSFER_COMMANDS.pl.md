@@ -4,28 +4,35 @@ Opublikowano badawczy prerelease
 [Stage 2C Handoff Lifecycle RC1 (R3)](https://github.com/robertjordan1990/echo-lineage/releases/tag/stage2c-lifecycle-rc1).
 Przegląd techniczny dokładnego R3 i publikacja zostały zakończone. Nadal nie
 wykonano ludzkiego przeglądu semantyki kluczy i uprawnień. Dotyczy on projektu
-ról i zasad udzielania zgody; nie wymaga rzeczywistych kluczy. Ich późniejszy
+ról i zasad nadawania uprawnień; nie wymaga rzeczywistych kluczy. Ich późniejszy
 przydział jest osobną decyzją. Przykłady opisują lokalny obieg `2C-h1-bound`;
 nie wdrażają go do istniejącego Echo/Work.
 Zmiany dokumentacji i demo na nowej gałęzi nie zmieniają opublikowanego tagu.
 
 ## Po co są te kroki
 
-Przy przekazaniu danych trzeba móc osobno odpowiedzieć: czy zgadzają się
-bajty i dowody, kto je przyjął, co zaimportowano i czy wolno uruchomić
-program, który będzie z nich korzystać.
+Przy przekazaniu danych można osobno sprawdzić: czy zgadzają się bajty i
+dowody, który uprawniony przez politykę aktor/klucz podpisał dany zapis,
+co zaimportowano i jakie uprawnienie (grant) zapisano dla lokalnego konsumenta.
 
 | Etap | Co sprawdza lub zapisuje |
 | --- | --- |
 | 2A | Odczytuje dowody i sprawdza ich spójność; nie przyjmuje ani nie importuje danych |
-| 2B | Zapisuje podpisaną decyzję operatora o istniejącym dokumencie niezależnego pochodzenia (`root`); nie uruchamia procesu |
-| 2C | Obsługuje przekazanie do wskazanego odbiorcy, zwrotny receipt, decyzję, import i osobną zgodę na lokalnego konsumenta |
+| 2B | Zapisuje decyzję o istniejącym dokumencie niezależnego pochodzenia (`root`), podpisaną kluczem przypisanym aktorowi przez politykę; nie uruchamia procesu |
+| 2C | Obsługuje przekazanie do wskazanego odbiorcy, zwrotny receipt, podpisaną decyzję, import i osobny grant dla lokalnego konsumenta |
 
-`verified` oznacza wynik sprawdzenia dowodów. `accepted` oznacza jawną decyzję
-uprawnionego operatora. `imported` oznacza zapis wybranych dozwolonych bajtów.
-`activate` dopiero udziela zgody konkretnemu konsumentowi; rzeczywisty start
-i potwierdzenie załadowania są kolejnymi krokami. Historyczny receipt nie
-potwierdza dzisiejszej dostępności procesu; do tego służy świeża odpowiedź.
+`verified` oznacza wynik sprawdzenia dowodów. `accepted` oznacza zapis decyzji
+przyjęcia, podpisanej kluczem uprawnionym przez politykę dla wskazanego aktora.
+`imported` oznacza zapis wybranych dozwolonych bajtów. `activate` zapisuje grant
+dla konkretnego lokalnego konsumenta. Start procesu i podpisana obserwacja
+stałego referencyjnego konsumenta o załadowaniu i sprawdzeniu wybranych bajtów
+są kolejnymi krokami. Historyczny receipt nie potwierdza dzisiejszej
+dostępności procesu; do tego służy świeża odpowiedź.
+
+Zwrotny receipt `received` dotyczy odbioru koperty. Późniejszy receipt
+konsumpcji kontekstu `loaded` jest osobną podpisaną obserwacją stałego
+referencyjnego konsumenta o załadowaniu i sprawdzeniu wybranych bajtów.
+Nie dowodzi przeczytania ani zrozumienia treści przez model chmurowy.
 
 ## Najpierw demonstracja syntetyczna
 
@@ -47,7 +54,7 @@ rzeczywistego przyjęcia przekazania przez człowieka.
 `report.json` zawiera wyniki, `commands.txt` przebieg komend, a `scenarios/`
 pliki przypadków przyjęcia, zastrzeżeń, odmowy, kwarantanny i kontroli błędów.
 Scenariusz przyjęcia uruchamia jeden własny lokalny proces konsumenta, pokazuje
-odczyt i cofnięcie zgody. Po zakończeniu lub obsłużonym błędzie demo żąda
+odczyt i cofnięcie uprawnienia. Po zakończeniu lub obsłużonym błędzie demo żąda
 zakończenia własnego procesu.
 Demo nie używa sieci, API ani istniejących usług Echo/Work i nie tworzy
 pamięci lub tożsamości modelu chmurowego.
@@ -59,24 +66,25 @@ kluczy, nonce i timestampów. Klucze demo pozostają materiałem testowym.
 
 ## Role i cztery decyzje
 
-Operator jest wskazany w lokalnej polityce zaufania. Uprawnienia są przypisane
+Polityka zaufania wskazuje aktora w roli operatora. Uprawnienia są przypisane
 do klucza, konkretnej czynności i instalacji. Program sprawdza poprawny podpis
 tym kluczem; nie ustala, który człowiek go użył. Nazwa, rozmowa ani
 identyfikator sesji nie nadają uprawnień. Podpis nie dowodzi biologicznej
 tożsamości ani fizycznej zgody człowieka.
 
-Decyzja dotyczy przedstawionej ciągłości i zakresu danych:
+Podpisany zapis decyzji dotyczy przedstawionej ciągłości i zakresu danych:
 
 | Wartość | Znaczenie |
 | --- | --- |
-| `accepted` | Przyjęcie sprawdzonej ciągłości bez zastrzeżeń |
-| `accepted_with_reservations` | Przyjęcie z jawnymi brakami lub wykluczeniami dopuszczonymi przez protokół |
-| `declined` | Odmowa przyjęcia |
-| `quarantined_integrity_failure` | Kwarantanna z powodu problemu integralności |
+| `accepted` | Zapis decyzji przyjęcia sprawdzonej ciągłości bez zastrzeżeń |
+| `accepted_with_reservations` | Zapis decyzji przyjęcia z jawnymi brakami lub wykluczeniami dopuszczonymi przez protokół |
+| `declined` | Zapis decyzji odmowy przyjęcia |
+| `quarantined_integrity_failure` | Zapis decyzji kwarantanny z powodu problemu integralności |
 
 Odbiór, decyzja, import i uruchomienie konsumenta to osobne kroki. Samo
 `accepted` nie uruchamia procesu i nie oznacza, że chmurowe Echo lub Work
-przyjęły kontekst. Podpisany odbiór nie jest zgodą na jego użycie.
+przyjęły kontekst. Podpisany odbiór nie oznacza rzeczywistej zgody człowieka
+ani modelu na użycie danych.
 
 ## Jak czytać komendę
 
@@ -148,12 +156,12 @@ zastępuje podpisu przyjęcia ciągłości.
 | 6 | `handoff file-facts`, `export_confirm` | Sprawdzenie rzeczywistych bajtów pliku i zapis lokalnego eksportu |
 | 7 | `receive` | Odbiorca sprawdza kopertę i trwale zapisuje dane jako nieaktywne |
 | 8 | `receipt sign`, `receipt_ingest` | Osobny zwrotny dowód wybranego faktu |
-| 9 | `decide` | Jedna z czterech jawnych decyzji odbiorcy |
+| 9 | `decide` | Zapis jednej z czterech decyzji z podpisem według przypiętej polityki |
 | 10 | `import` | Atomowy import dokładnie wybranych dozwolonych danych |
-| 11 | `activate` | Osobna zgoda na wskazanego konsumenta i zakres |
+| 11 | `activate` | Osobny grant dla wskazanego konsumenta i zakresu |
 | 12 | `activation request` | Trwała intencja przed startem rzeczywistego procesu |
-| 13 | `consumer query` | Odpowiedź z załadowanego kontekstu, z nowym podpisanym wyzwaniem |
-| 14 | `deactivate`, `consumer stop` | Cofnięcie zgody na przyszły odczyt, następnie zakończenie procesu |
+| 13 | `consumer query` | Podpisana odpowiedź stałego referencyjnego konsumenta na nowe wyzwanie dotyczące wskazanych bajtów |
+| 14 | `deactivate`, `consumer stop` | Cofnięcie uprawnienia do przyszłego odczytu, następnie zakończenie procesu |
 
 Przy migracji `--artifacts` wskazuje obiekt JSON z listą `artifacts`, zawierającą
 przechwycone bajty i jawne braki. `--policy` oraz `--expected-policy-digest` są
@@ -162,7 +170,8 @@ również trzeba podać niezależny `--expected-policy-digest`; nie wolno zaufa�
 polityce tylko dlatego, że przyniosła ją paczka.
 
 `activation request` wymaga klucza z rolą lokalnego konsumenta, odrębnego od
-zgody operatora. Do podpisania zgody `activate` używa się klucza operatora.
+klucza podpisującego grant. Do podpisania grantu `activate` używa się klucza
+przypiętego przez politykę do roli operatora.
 Konsument jest stałym lokalnym programem, którego digest przypięto wcześniej.
 Przeniesione polecenia, kod i tekst pozostają danymi.
 
@@ -193,9 +202,9 @@ W pliku `--inputs` występują dokładnie następujące pola:
 `length` (1–256 znaków) i świeży `nonce` (64 małe znaki szesnastkowe). Odczyt
 i wyszukiwanie są dosłowne i ograniczone; nic nie wykonuje tekstu dokumentu.
 Operacje `activation_start` i `activation_loaded` należą do przypiętego adaptera
-konsumenta i nie zastępują zgody operatora.
+konsumenta i nie zastępują grantu podpisanego kluczem roli operatora.
 
-Nowy grant wymaga miejsca na cały obieg: zgodę, zamiar startu, potwierdzenie
+Nowy grant wymaga miejsca na cały obieg: zapis grantu, zamiar startu, potwierdzenie
 załadowania i odwołanie. Program rezerwuje odpowiednio 4, 3 i 2 wolne wpisy
 przy kolejnych etapach, więc odwołanie zachowuje swój ostatni wpis. Błąd
 `PROFILE_REVOCATION_CAPACITY` oznacza odmowę nowej aktywacji bez zmiany stanu.
@@ -216,7 +225,7 @@ python3 -B tools/tools/echo_transfer.py activation reconcile \
 `reconcile` sprawdza istniejącą instancję i jej świeżą odpowiedź, bez ponownego
 uruchamiania. Historyczny receipt zachowuje znaczenie po śmierci procesu.
 Niepewny start nie uruchamia automatycznie drugiej instancji. Nowa próba po
-potwierdzonym zakończeniu wymaga nowej zgody i nowego katalogu kontroli.
+potwierdzonym zakończeniu wymaga nowego grantu i nowego katalogu kontroli.
 
 Kod wyjścia **0** oznacza powodzenie konkretnej komendy; **10** oznacza stan
 niepełny lub niedostępność; **2** oznacza odmowę lub błąd. `commit_uncertain`

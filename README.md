@@ -1,10 +1,12 @@
 # echo-lineage — check, accept, and use a handoff explicitly
 
 `echo-lineage` makes a transfer of context inspectable: check the evidence,
-record an authorized decision, select the bytes to import, and separately
-allow a local program to read them. Each step leaves a different record.
-This helps an operator answer **what arrived, who authorized which action,
-and whether the selected data was actually loaded**.
+record a decision signed under a key allowed by the policy, select the bytes
+to import, and record a separate grant for a local program to read them. Each
+step leaves a different record. This helps an operator see **what arrived,
+which policy-authorized actor/key signed or recorded each action, and what
+evidence the fixed reference consumer returned about loading and probing the
+selected bytes**.
 
 The published Stage 2C baseline is
 [Handoff Lifecycle RC1 (R3)](https://github.com/robertjordan1990/echo-lineage/releases/tag/stage2c-lifecycle-rc1),
@@ -26,7 +28,7 @@ See [NOTICE.md](NOTICE.md) for attribution and scope.
 | Stage | What it does | What it leaves separate |
 | --- | --- | --- |
 | [2A: verification](tools/spec/echo-lineage-v1/README.md) | Reads documents and checks hashes, references, and continuity rules | Acceptance, trusted-key authentication, import, and execution |
-| [2B: local decisions](tools/spec/echo-lineage-state-v1/README.md) | Records four signed operator decisions about an existing document with an independent origin (`root`) | Context transfer and runtime activation; `runtime_activation` stays false |
+| [2B: local decisions](tools/spec/echo-lineage-state-v1/README.md) | Records four signed decisions about an existing document with an independent origin (`root`), using keys bound by policy to the stated actors | Context transfer and runtime activation; `runtime_activation` stays false |
 | [2C: handoff lifecycle](tools/spec/echo-lineage-transfer-v1/README.md) | Transfers one bounded context to a new pinned recipient, with return receipts, import, and a separately authorized local consumer | Cloud-model integration, identity claims, automatic network delivery, and deployment |
 
 A valid signature under a pinned key is checked against the granted role,
@@ -38,11 +40,16 @@ prove physical consent, a model session, or authorship of an unsigned root.
 | Result | Meaning |
 | --- | --- |
 | Verified | The checked evidence satisfies the declared consistency rules |
-| Accepted | An authorized operator recorded an explicit acceptance decision |
+| Accepted | A decision marked `accepted` was recorded with a valid signature under a policy-authorized key for the stated actor |
 | Imported | The selected, verified, accepted bytes were written to recipient state |
-| Activation authorized | An operator allowed a particular local consumer to use a particular read set |
-| Loaded receipt | The consumer recorded loading and probing those bytes in that process |
-| Fresh status/probe | The consumer answered a new query under the current grant |
+| Activation authorized | A grant for a particular local consumer and read set was recorded with a valid signature under the policy-authorized key |
+| Loaded receipt | The fixed reference consumer returned a signed observation about loading and probing the selected bytes |
+| Fresh status/probe | The fixed reference consumer returned a new signed observation under the current grant |
+
+An early `received` return receipt records envelope receipt. The later `loaded`
+context-consumption receipt is a separate observation from the fixed reference
+consumer about loading and probing selected bytes. These observations do not
+show that a cloud model read or understood the content.
 
 Acceptance does not itself import or execute anything. Import does not grant
 permission to start a consumer. A historical loaded receipt does not prove the
