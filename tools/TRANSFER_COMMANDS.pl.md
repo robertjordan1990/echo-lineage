@@ -1,15 +1,69 @@
 # Komendy 2C: co robi każdy krok
 
-Status: kandydat do testów i niezależnego przeglądu kodu. Ten opis nie
-jest poleceniem utworzenia prawdziwych kluczy ani wdrożenia do istniejącego
-Echo/Work. Przykłady opisują jawny, lokalny obieg `2C-h1-bound`.
+Opublikowano badawczy prerelease
+[Stage 2C Handoff Lifecycle RC1 (R3)](https://github.com/robertjordan1990/echo-lineage/releases/tag/stage2c-lifecycle-rc1).
+Przegląd techniczny dokładnego R3 i publikacja zostały zakończone. Nadal nie
+wykonano ludzkiego przeglądu semantyki kluczy i uprawnień. Dotyczy on projektu
+ról i zasad udzielania zgody; nie wymaga rzeczywistych kluczy. Ich późniejszy
+przydział jest osobną decyzją. Przykłady opisują lokalny obieg `2C-h1-bound`;
+nie wdrażają go do istniejącego Echo/Work.
+Zmiany dokumentacji i demo na nowej gałęzi nie zmieniają opublikowanego tagu.
+
+## Po co są te kroki
+
+Przy przekazaniu danych trzeba móc osobno odpowiedzieć: czy zgadzają się
+bajty i dowody, kto je przyjął, co zaimportowano i czy wolno uruchomić
+program, który będzie z nich korzystać.
+
+| Etap | Co sprawdza lub zapisuje |
+| --- | --- |
+| 2A | Odczytuje dowody i sprawdza ich spójność; nie przyjmuje ani nie importuje danych |
+| 2B | Zapisuje podpisaną decyzję operatora o istniejącym dokumencie niezależnego pochodzenia (`root`); nie uruchamia procesu |
+| 2C | Obsługuje przekazanie do wskazanego odbiorcy, zwrotny receipt, decyzję, import i osobną zgodę na lokalnego konsumenta |
+
+`verified` oznacza wynik sprawdzenia dowodów. `accepted` oznacza jawną decyzję
+uprawnionego operatora. `imported` oznacza zapis wybranych dozwolonych bajtów.
+`activate` dopiero udziela zgody konkretnemu konsumentowi; rzeczywisty start
+i potwierdzenie załadowania są kolejnymi krokami. Historyczny receipt nie
+potwierdza dzisiejszej dostępności procesu; do tego służy świeża odpowiedź.
+
+## Najpierw demonstracja syntetyczna
+
+Na Linuksie, z katalogu głównego repozytorium i w Pythonie z zależnościami
+`requirements-2b.txt`, uruchom:
+
+```sh
+python3 -B scripts/demo_transfer.py --output-dir /tmp/echo-lineage-demo-run-001
+```
+
+[Skrypt demo](../scripts/demo_transfer.py) wyjaśnia kroki po polsku i używa
+publicznych CLI. Wymaga nowego, nieistniejącego katalogu poza każdym Git
+checkoutem. Tworzy w nim fikcyjne dane, polityki i jednorazowe klucze
+demonstracyjne; nie podawaj danych ani kluczy rzeczywistej instalacji.
+Istniejąca ścieżka zostaje odrzucona bez ponownego użycia. Wszystkie decyzje
+operatorów w demo są zaprogramowanymi decyzjami fikcyjnych ról; nie zapisują
+rzeczywistego przyjęcia przekazania przez człowieka.
+
+`report.json` zawiera wyniki, `commands.txt` przebieg komend, a `scenarios/`
+pliki przypadków przyjęcia, zastrzeżeń, odmowy, kwarantanny i kontroli błędów.
+Scenariusz przyjęcia uruchamia jeden własny lokalny proces konsumenta, pokazuje
+odczyt i cofnięcie zgody. Po zakończeniu lub obsłużonym błędzie demo żąda
+zakończenia własnego procesu.
+Demo nie używa sieci, API ani istniejących usług Echo/Work i nie tworzy
+pamięci lub tożsamości modelu chmurowego.
+
+Kod **0** oznacza zgodny oczekiwany przebieg demo, także oczekiwane odmowy;
+**2** oznacza błąd przygotowania lub wykonania. Do powtórzenia wybierz nową
+nazwę katalogu. Porównujemy wyniki czynności, a nie identyczność losowych
+kluczy, nonce i timestampów. Klucze demo pozostają materiałem testowym.
 
 ## Role i cztery decyzje
 
-Operator to posiadacz klucza wcześniej wpisanego do lokalnej polityki zaufania,
-z prawem do konkretnej czynności w konkretnej instalacji. Nie zgadujemy jego
-uprawnień z nazwy, rozmowy ani identyfikatora sesji. Podpis nie dowodzi
-biologicznej tożsamości ani fizycznej zgody człowieka.
+Operator jest wskazany w lokalnej polityce zaufania. Uprawnienia są przypisane
+do klucza, konkretnej czynności i instalacji. Program sprawdza poprawny podpis
+tym kluczem; nie ustala, który człowiek go użył. Nazwa, rozmowa ani
+identyfikator sesji nie nadają uprawnień. Podpis nie dowodzi biologicznej
+tożsamości ani fizycznej zgody człowieka.
 
 Decyzja dotyczy przedstawionej ciągłości i zakresu danych:
 
@@ -169,3 +223,7 @@ niepełny lub niedostępność; **2** oznacza odmowę lub błąd. `commit_uncert
 albo `output_uncertain` wymagają obejrzenia stanu/pliku przed ponowieniem.
 Nie przywracaj starego snapshotu, aby obejść błąd: bez zewnętrznego checkpointa
 pełny rollback może pozostać niewykrywalny i przywrócić starego pisarza.
+
+Projekt zewnętrznego checkpointu i ewentualnego adaptera modelu to osobne,
+opcjonalne rozszerzenia. Nie są dodatkowymi warunkami użycia tego
+syntetycznego demonstratora ani nowymi warunkami dla opublikowanego R3.
