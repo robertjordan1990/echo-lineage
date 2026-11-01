@@ -1,6 +1,19 @@
 # Stage 2C: explicit local transfer and context consumption
 
-Status: **implementation test candidate; independent patch review and release pending**.
+Status: **published research prerelease, Stage 2C Handoff Lifecycle RC1 (R3)**.
+Independent technical review of exact R3 is complete; the source candidate was
+published separately. **Human review of key and privilege semantics remains
+pending.** That design review needs no real keys; later key provisioning is a
+separate decision. Publication does not authorize production keys, deployment,
+or adoption. Follow-up docs and demo changes leave the published RC1 tag
+unchanged.
+
+For a guided synthetic run, see the [repository quickstart](../../../README.md#start-with-the-synthetic-walkthrough)
+and [demo CLI](../../../scripts/demo_transfer.py). It uses fictional data and
+disposable demonstration keys in a fresh directory outside Git and exercises
+the public CLI. Its operator decisions are scripted fictional decisions, not
+actual human acceptance. It requests shutdown of its own local consumer on
+completion or a handled failure.
 
 The first profile, `2C-h1-bound`, extends the separate local Stage 2B state
 workflow. It leaves the existing Stage 2A verifier, schemas, exits, and Stage 2B
@@ -72,8 +85,9 @@ decision, context import, context activation, deactivation, return receipt, and
 receipt ingestion. The consumer role can only attest to consumption. A previous
 `lineage_acceptance` grant does not authorize source migration. A control
 decision grant does not imply v1 lineage-acceptance authority. Operators sign as
-their own recording actor; this authenticates a pinned key holder, not
-biological identity, physical consent, or an unsigned root's author.
+their own recording actor; verification authenticates a signature under the
+scoped pinned key, not the human using it, physical consent, or an unsigned
+root's author.
 
 The separately signed packet has closed fields `schema`, `policy_digest`,
 `purpose`, `actor_id`, `installation_id`, `role`, `payload`, and an Ed25519
@@ -199,9 +213,19 @@ snapshot remains undetectable: `rollback_protection=not_externally_anchored`.
 A checkpoint must verify actual history membership, not just generation.
 UTC values are explicit clock claims, not a trusted-time service.
 
-Publication requires unchanged 151-test stdlib Stage 2A and 307-test Stage 2B
-profiles, full 2C negative/concurrency/crash/process gates, an updated exact
-manifest/test count, independent review of the exact patch, and human
-key/privilege review. Implementation, review, publication, installation, and
-adoption remain distinct decisions. No real keys or private context belong
-in this public tree.
+The published R3 research prerelease records the unchanged 151-test stdlib
+Stage 2A and 307-test Stage 2B profiles, its full 427-test gate, exact manifest,
+CI, and independent technical reviews in the
+[release notes](https://github.com/robertjordan1990/echo-lineage/releases/tag/stage2c-lifecycle-rc1).
+Follow-up changes require their own verification; the old result is not a new
+test run. Human review of key and privilege semantics remains pending and
+separate from technical model-assisted review and source publication. It can
+assess the role and authorization design without real keys. Actual key
+provisioning, installation, and key-use decisions remain separate; they have
+not been made by these examples.
+No real keys or private context belong in this public tree.
+
+An external checkpoint service and an AI-model adapter are optional extensions
+with separate contracts. They do not change the declared RC1 scope or add new
+requirements to its synthetic demonstration. Implementation, review,
+publication, installation, and adoption remain distinct facts.

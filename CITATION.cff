@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "echo-lineage: read-only verification and bounded signed local decisions"
+title: "echo-lineage: verification, signed decisions, and bounded local handoff"
 message: "Cite Robert Jordan as the project pseudonym, together with the repository and exact commit used; this is not attribution to a separate person."
 type: software
 authors:
@@ -11,12 +11,19 @@ keywords:
   - lineage verification
   - handoff evidence
   - explicit acceptance
+  - local context consumption
   - reproducibility
 abstract: >-
   A transport-neutral protocol with a read-only verifier that separates
-  consistency checks for lineage and handoff evidence from acceptance and
-  activation. A separate bounded local Stage 2B candidate records scoped
-  operator decisions using pinned Ed25519 keys and never activates a runtime.
+  consistency checks for lineage and handoff evidence from acceptance, import,
+  and activation. Stage 2B records scoped local operator decisions using pinned
+  Ed25519 keys and never activates a runtime. The separate Stage 2C profile
+  implements one bound source-to-recipient handoff, return receipts, selected
+  verified-byte import, and separately authorized use by a fixed local UTF-8
+  consumer. It does not integrate with or authenticate a cloud model. The
+  Stage 2C RC1 research prerelease has completed technical review; human review
+  of key and privilege semantics remains pending and does not require real
+  keys. Actual key provisioning is a separate decision.
   Maintained under the project pseudonym Robert Jordan and developed through
   documented human–AI collaboration within fAIR DecentrAIzation. The pseudonym
   does not identify a separate person or assign copyright ownership. This

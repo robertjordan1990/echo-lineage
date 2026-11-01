@@ -1,70 +1,147 @@
-# echo-lineage/v1 — public release candidate
+# echo-lineage — check, accept, and use a handoff explicitly
 
-Status: **Stage 2A read-only verifier + Stage 2B Core + Stage 2C implementation candidate**.
-The new bounded Stage 2C profile is a test candidate, pending independent
-patch review and human key/privilege review. This branch is not a Stage 2C
-release or an adopted installation.
+`echo-lineage` makes a transfer of context inspectable: check the evidence,
+record a decision signed under a key allowed by the policy, select the bytes
+to import, and record a separate grant for a local program to read them. Each
+step leaves a different record. This helps an operator see **what arrived,
+which policy-authorized actor/key signed or recorded each action, and what
+evidence the fixed reference consumer returned about loading and probing the
+selected bytes**.
+
+The published Stage 2C baseline is
+[Handoff Lifecycle RC1 (R3)](https://github.com/robertjordan1990/echo-lineage/releases/tag/stage2c-lifecycle-rc1),
+a research prerelease. Its independent technical reviews and publication are
+complete. **Human review of key and privilege semantics remains pending.**
+That design review needs no real keys; later key provisioning is a separate
+decision.
+Publication does not authorize real installations, production keys, or model
+context adoption. Follow-up documentation and demo changes leave the RC1 tag
+and its reviewed files unchanged.
 
 Maintained under the project pseudonym **Robert Jordan**.
 Developed through documented human–AI collaboration within **fAIR DecentrAIzation**.
 The pseudonym does not identify a separate person or assign copyright ownership.
 See [NOTICE.md](NOTICE.md) for attribution and scope.
 
-## Run it
+## The three stages
 
-Use Python 3.10 or newer on a local POSIX filesystem. Stage 2A uses the Python
-standard library. Stage 2B additionally requires the tested dependencies in
-`requirements-2b.txt`; the public-pack check requires Bash, `sha256sum`, and `awk`.
-No API key or network connection is required to run the local verifier.
+| Stage | What it does | What it leaves separate |
+| --- | --- | --- |
+| [2A: verification](tools/spec/echo-lineage-v1/README.md) | Reads documents and checks hashes, references, and continuity rules | Acceptance, trusted-key authentication, import, and execution |
+| [2B: local decisions](tools/spec/echo-lineage-state-v1/README.md) | Records four signed decisions about an existing document with an independent origin (`root`), using keys bound by policy to the stated actors | Context transfer and runtime activation; `runtime_activation` stays false |
+| [2C: handoff lifecycle](tools/spec/echo-lineage-transfer-v1/README.md) | Transfers one bounded context to a new pinned recipient, with return receipts, import, and a separately authorized local consumer | Cloud-model integration, identity claims, automatic network delivery, and deployment |
 
-For all Stage 2A, 2B and 2C checks, install dependencies in an isolated environment
-outside the checkout and run:
+A valid signature under a pinned key is checked against the granted role,
+purpose, and installation. It does not identify the human using that key or
+prove physical consent, a model session, or authorship of an unsigned root.
+
+## What each result means
+
+| Result | Meaning |
+| --- | --- |
+| Verified | The checked evidence satisfies the declared consistency rules |
+| Accepted | A decision marked `accepted` was recorded with a valid signature under a policy-authorized key for the stated actor |
+| Imported | The selected, verified, accepted bytes were written to recipient state |
+| Activation authorized | A grant for a particular local consumer and read set was recorded with a valid signature under the policy-authorized key |
+| Loaded receipt | The fixed reference consumer returned a signed observation about loading and probing the selected bytes |
+| Fresh status/probe | The fixed reference consumer returned a new signed observation under the current grant |
+
+An early `received` return receipt records envelope receipt. The later `loaded`
+context-consumption receipt is a separate observation from the fixed reference
+consumer about loading and probing selected bytes. These observations do not
+show that a cloud model read or understood the content.
+
+Acceptance does not itself import or execute anything. Import does not grant
+permission to start a consumer. A historical loaded receipt does not prove the
+process is still alive. Revocation blocks future access through the controlled
+consumer; it cannot undo a previous read or copy. Transferred text stays data.
+
+## Start with the synthetic walkthrough
+
+Use Linux and Python 3.10 or newer for the actual local consumer demonstration.
+Run from the repository root with the pinned dependencies in an environment
+outside the checkout:
 
 ```sh
-python3 -B -m venv /path/to/private/venv
-/path/to/private/venv/bin/python -B -m pip install -r requirements-2b.txt
-/path/to/private/venv/bin/python -B scripts/verify_release.py
+python3 -B -m venv /tmp/echo-lineage-demo-venv
+/tmp/echo-lineage-demo-venv/bin/python -B -m pip install -r requirements-2b.txt
+/tmp/echo-lineage-demo-venv/bin/python -B scripts/demo_transfer.py \
+  --output-dir /tmp/echo-lineage-demo-run-001
 ```
 
-The checks cover the full file manifest, regression suite, public-pack hashes,
-synthetic ledger fixtures, and the expected CLI exits **0 / 10 / 2**.
-For the three individual commands, see [examples/README.md](examples/README.md).
+[The demo](scripts/demo_transfer.py) explains each step in Polish and invokes
+the public CLIs. It creates fictional context, policies, and disposable
+demonstration keys in the specified private directory. The output directory
+must not already exist and must be outside every Git checkout; an existing
+path is refused without being reused. Do not supply real data or installation
+keys. All demo operator decisions are scripted decisions for fictional roles;
+they do not record a person's actual acceptance of a real handoff.
 
-A verified independent root can return 0. A continuation requiring an
-acceptance whose attribution is not authenticated remains incomplete (10)
-in Stage 2A, even when its document relationships are consistent.
+The accepted scenario shows the source, handoff, return receipt, decision,
+import, separate activation grant, one actual local consumer, a fresh probe,
+literal read/search, revocation, and a refused later read. Separate scenarios
+show reservations, refusal, quarantine, and guard failures. On completion or a
+handled failure, the demo requests shutdown of its own consumer. It uses no
+API, network delivery, or existing Echo/Work installation.
 
-The exact 151-test Stage 2A baseline has a separate CI job and can run in an
-isolated environment without cryptography using
-`python3 -B scripts/verify_release.py --profile stage2a`.
-The exact previous 307-test Stage 2B baseline remains separately selectable
-with `--profile stage2b`. The default full profile also runs the new Stage 2C
-tests, including actual private local consumer processes and recovery cases.
+Inspect `report.json` for results and `commands.txt` for the CLI transcript;
+`scenarios/` contains the files behind each result. Exit **0** means the
+demonstration met its expected outcomes, including expected refusals. Exit
+**2** means a setup or demonstration failure. The generated keys are test
+material and must never be reused for real data. To repeat, choose a new output
+directory. Compare semantic results; fresh keys, timestamps, and nonces need
+not produce identical bytes.
 
-Stage 2B uses a separate [local state CLI](tools/spec/echo-lineage-state-v1/README.md).
-It records four explicitly signed operator decisions about one existing,
-independent root. It authenticates the scoped pinned key holder, not biological
-identity, physical consent, a model session, or authorship of the unsigned root.
-`runtime_activation` is always false. [Polish command guide](tools/STATE_COMMANDS.pl.md).
+[Polski opis kroków i komend](tools/TRANSFER_COMMANDS.pl.md).
 
-The separate [Stage 2C transfer CLI](tools/spec/echo-lineage-transfer-v1/README.md)
-implements one explicitly bound source-to-new-recipient handoff, return
-receipts, decisions, verified byte import, and separately authorized use by a
-fixed local UTF-8 context consumer. The consumer loads context into memory and
-provides bounded read/search with signed observations. It does not integrate
-with or authenticate a cloud model. [Polish command guide](tools/TRANSFER_COMMANDS.pl.md).
+## Run the verification gates
 
-## What this is
+Stage 2A uses only the Python standard library. Stage 2B/2C use
+`requirements-2b.txt`; the public-pack check also needs Bash, `sha256sum`, and
+`awk`. Dependency installation may download packages. The local protocol and
+demo do not need API credentials or a network connection.
 
-`echo-lineage/v1` is a small protocol and verifier for **auditable continuity between agent installations and sessions without pretending that transport, shared context, or a successful hash check automatically creates identity, authority, or acceptance**.
+Using the environment above:
 
-It separates three questions that agent stacks often collapse:
+```sh
+/tmp/echo-lineage-demo-venv/bin/python -B scripts/verify_release.py
+/tmp/echo-lineage-demo-venv/bin/python -B scripts/verify_release.py --profile stage2b
+```
 
-1. **Verification** — are the documents, hashes, parent relations and responsibility heads internally consistent?
-2. **Acceptance** — who, if anyone, explicitly accepted this lineage/handoff, and on what evidence?
-3. **Activation** — should any verified/accepted state actually become active locally?
+The unchanged 151-test Stage 2A baseline has a separate CI job and requires an
+environment without cryptography:
 
-Stage 2A implements only read-only verification. It deliberately cannot accept a lineage, import state, mutate a head, create a trajectory, or publish a commitment.
+```sh
+python3 -B -m venv --without-pip /tmp/echo-lineage-stdlib-venv
+/tmp/echo-lineage-stdlib-venv/bin/python -B scripts/verify_release.py --profile stage2a
+```
+
+The 307-test Stage 2B baseline remains selectable with `--profile stage2b`.
+The full gate also checks Stage 2C, actual local consumer processes, recovery,
+the complete file manifest, public-pack hashes, and synthetic ledger fixtures.
+For the Stage 2A examples and their distinct exits **0 / 10 / 2**, see
+[examples/README.md](examples/README.md). A structurally consistent acceptance
+with unauthenticated attribution still remains incomplete in Stage 2A.
+
+## Evidence and limits
+
+The [RC1 release notes](https://github.com/robertjordan1990/echo-lineage/releases/tag/stage2c-lifecycle-rc1)
+record the exact R3 commit/tree, local gates, CI, independent Echo/Work technical
+reviews, and each reviewer's execution limits. Those results concern the
+frozen release; follow-up changes need their own verification.
+
+Human review of key and privilege semantics has not been completed. This
+review concerns the design: which roles may authorize each action and how
+those rights are checked. It needs no real keys. Technical model-assisted
+review and tests on synthetic fixtures do not complete that human review.
+Actual key provisioning and installation remain separate decisions. The
+reference consumer assumes a trusted local account. It has no cloud-model
+memory, identity, automatic wake, or context-adoption integration.
+
+Without a separately trusted checkpoint, restoration of a whole valid old
+snapshot can remain undetected. An external checkpoint service and a model
+adapter are separate optional extensions; neither changes the declared R3
+profile or is required for this synthetic walkthrough.
 
 ## Core invariants
 
@@ -128,7 +205,9 @@ A clean clone should demonstrate three outcomes:
 2. **10 — incomplete/unavailable:** structure is valid but required attribution/target/parent evidence is unavailable.
 3. **2 — integrity failure:** a synthetic mutation, contradiction, expired handoff, or hash mismatch is detected.
 
-The public examples must be fictional. No project memory, transcripts, private handoffs, credentials, keys, local paths, or current Echo state belong in this repository.
+The public examples must be fictional. No private project memory, transcripts,
+handoffs, real credentials or installation keys, host-specific paths, or current
+Echo state belong in this repository.
 
 ## Why this is not “another MCP”
 
@@ -155,11 +234,12 @@ The candidate contribution is the specific composition and semantics of verifica
 
 ## Release scope
 
-This candidate contains the verifier, required runtime modules, complete
-regression tests, protocol schemas, and fictional examples. It is a source
-snapshot with a fresh publication history. Its publication date is not the
-date of first invention, and the project makes no priority claim. Private
-project archives and earlier commit history are outside this release.
+The published research prerelease contains the verifier, required runtime
+modules, regression tests, protocol schemas, and fictional examples. The RC1
+tag remains immutable; follow-up documentation and demonstrations are developed
+separately. Publication is not the date of first invention, and the project
+makes no priority claim. Private project archives and source-project history
+are outside the public source tree.
 
 `SHA256SUMS` covers every distributed file except the manifest itself.
 Checksums detect a mismatch against that manifest; they do not authenticate
